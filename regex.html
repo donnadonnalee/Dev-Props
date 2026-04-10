@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RegEx Tester | Premium Suite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --match-bg: rgba(99, 102, 241, 0.4);
+            --match-border: rgba(99, 102, 241, 0.8);
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --error-color: #f85149;
+            --font-family: 'Inter', sans-serif;
+            --mono-font: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+            padding: 40px 20px;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .back-link { color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: 0.2s; }
+        .back-link:hover { color: var(--accent-color); }
+
+        .editor-section { display: grid; grid-template-columns: 1fr; gap: 24px; }
+
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* RegEx Input Area */
+        .regex-input-container {
+            display: flex; align-items: stretch; background: rgba(0,0,0,0.3); border: 2px solid var(--border-color);
+            border-radius: 12px; padding: 4px; transition: 0.2s;
+        }
+        .regex-input-container:focus-within { border-color: var(--accent-color); box-shadow: 0 0 15px var(--accent-glow); }
+        .regex-slash { padding: 12px; font-family: var(--mono-font); font-size: 20px; color: var(--text-secondary); display: flex; align-items: center; }
+        .regex-field {
+            flex-grow: 1; background: transparent; border: none; outline: none; color: #818cf8;
+            font-family: var(--mono-font); font-size: 18px; padding: 12px 0; font-weight: 600;
+        }
+        .flags-container { display: flex; align-items: center; border-left: 1px solid var(--border-color); padding: 0 12px; gap: 8px; }
+        .flag-toggle {
+            padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700;
+            color: var(--text-secondary); transition: 0.2s; user-select: none;
+        }
+        .flag-toggle.active { background: var(--accent-color); color: white; }
+
+        /* Test Area with Layered Highlights */
+        .test-wrapper { position: relative; min-height: 250px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); }
+        .test-area-shared {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 24px; font-family: var(--mono-font); font-size: 16px; line-height: 1.5;
+            white-space: pre-wrap; word-wrap: break-word; overflow-y: auto;
+        }
+        #backdrop { color: transparent; z-index: 1; pointer-events: none; }
+        #testInput {
+            background: transparent; border: none; outline: none; color: var(--text-primary);
+            resize: none; z-index: 2; caret-color: white;
+        }
+        mark { background: var(--match-bg); border-bottom: 2px solid var(--match-border); border-radius: 2px; color: transparent; }
+
+        /* Result Sidebar Area */
+        .results-grid { display: grid; grid-template-columns: 1fr 350px; gap: 24px; }
+        @media (max-width: 900px) { .results-grid { grid-template-columns: 1fr; } }
+
+        .match-card { padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.03); margin-bottom: 12px; border: 1px solid transparent; }
+        .match-card:hover { border-color: rgba(99, 102, 241, 0.2); }
+        .match-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: var(--text-secondary); }
+        .match-value { font-family: var(--mono-font); font-size: 14px; color: #fff; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; display: block; }
+
+        .group-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .group-table td { padding: 4px 0; font-size: 11px; }
+        .group-idx { color: var(--accent-color); font-weight: 800; width: 20px; }
+        .group-val { color: var(--text-secondary); }
+
+        .error-message { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--error-color); color: var(--error-color); padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+
+        .empty-state { text-align: center; padding: 40px; color: var(--text-secondary); border: 2px dashed rgba(255,255,255,0.05); border-radius: 12px; }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        .badge-accent { background: var(--accent-color); color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <a href="index.html" class="back-link"><i data-lucide="arrow-left" style="width:16px; height:16px"></i> BACK TO DASHBOARD</a>
+            <div style="font-size: 12px; opacity: 0.5;">v1.0 Designer Edition</div>
+        </header>
+
+        <div class="glass-card">
+            <div class="label-row">
+                <span class="label">REGULAR EXPRESSION</span>
+                <span id="matchCountBadge" class="badge badge-accent hidden">0 Matches</span>
+            </div>
+            <div class="regex-input-container">
+                <span class="regex-slash">/</span>
+                <input type="text" id="regexField" class="regex-field" placeholder="（例：[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})" value="[a-zA-Z0-9._%+-]+@.+">
+                <span class="regex-slash">/</span>
+                <div class="flags-container">
+                    <div class="flag-toggle active" data-flag="g">g</div>
+                    <div class="flag-toggle active" data-flag="i">i</div>
+                    <div class="flag-toggle" data-flag="m">m</div>
+                </div>
+            </div>
+            <div id="errorMessage" class="error-message"></div>
+        </div>
+
+        <div class="results-grid">
+            <div class="glass-card">
+                <div class="label-row">
+                    <span class="label">TEST STRING</span>
+                </div>
+                <div class="test-wrapper">
+                    <div id="backdrop" class="test-area-shared"></div>
+                    <textarea id="testInput" class="test-area-shared" placeholder="ここにテストしたい文字列を入力してください..." spellcheck="false">hello@example.com
+contact@support.jp
+invalid-email@com</textarea>
+                </div>
+            </div>
+
+            <div class="privacy-note" style="margin-top: 24px; padding: 20px; background: rgba(99, 102, 241, 0.03); border-radius: 16px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent-color); font-weight: 700; margin-bottom: 8px; font-size: 14px;">
+                    <i data-lucide="shield-check" style="width: 18px; height: 18px;"></i>
+                    <span>Privacy & Security</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5; margin: 0;">
+                    入力された文字列や正規表現はすべてブラウザ内でローカルに処理されます。サーバーへの送信は一切行われません。
+                </p>
+            </div>
+
+            <aside class="sidebar">
+                <div class="glass-card" style="height: 100%; max-height: 600px; overflow-y: auto;">
+                    <div class="label-row">
+                        <span class="label">MATCH CAPTURES</span>
+                    </div>
+                    <div id="matchList"></div>
+                    <div id="emptyResults" class="empty-state">一致する箇所はありません</div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        const regexField = document.getElementById('regexField');
+        const testInput = document.getElementById('testInput');
+        const backdrop = document.getElementById('backdrop');
+        const errorMessage = document.getElementById('errorMessage');
+        const matchList = document.getElementById('matchList');
+        const emptyResults = document.getElementById('emptyResults');
+        const matchCountBadge = document.getElementById('matchCountBadge');
+        const flagToggles = document.querySelectorAll('.flag-toggle');
+
+        let flags = 'gi';
+
+        function update() {
+            const regexStr = regexField.value;
+            const text = testInput.value;
+            
+            errorMessage.style.display = 'none';
+            matchCountBadge.classList.add('hidden');
+            matchList.innerHTML = '';
+            
+            if (!regexStr) {
+                backdrop.innerHTML = text;
+                emptyResults.style.display = 'block';
+                return;
+            }
+
+            try {
+                const re = new RegExp(regexStr, flags);
+                const matches = [];
+                let match;
+
+                // For highlights, handle the text with marks
+                let highlightedText = text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+                
+                // If it's global, loop. If not, just one.
+                if (flags.includes('g')) {
+                    while ((match = re.exec(text)) !== null) {
+                        if (match.index === re.lastIndex) re.lastIndex++; // Prevent infinite loops on zero-width matches
+                        matches.push(match);
+                    }
+                } else {
+                    match = text.match(re);
+                    if (match) matches.push(match);
+                }
+
+                if (matches.length > 0) {
+                    emptyResults.style.display = 'none';
+                    matchCountBadge.innerText = `${matches.length} Matches`;
+                    matchCountBadge.classList.remove('hidden');
+
+                    matches.forEach((m, i) => {
+                        const card = document.createElement('div');
+                        card.className = 'match-card fade-in';
+                        
+                        let groupsHtml = '';
+                        if (m.length > 1) {
+                            groupsHtml = '<table class="group-table">';
+                            for (let j = 1; j < m.length; j++) {
+                                groupsHtml += `<tr><td class="group-idx">$${j}</td><td class="group-val">${m[j] || '(empty)'}</td></tr>`;
+                            }
+                            groupsHtml += '</table>';
+                        }
+
+                        card.innerHTML = `
+                            <div class="match-header"><span>Match ${i+1}</span> <span>Index: ${m.index}</span></div>
+                            <code class="match-value">${m[0]}</code>
+                            ${groupsHtml}
+                        `;
+                        matchList.appendChild(card);
+                    });
+
+                    // Build Highlight (this is tricky with overlapping/entities)
+                    // We use a simple replacement for the demo, but for real tools we sort reverse to maintain indices
+                    let html = escapeHtml(text);
+                    const globalRe = new RegExp(regexStr, flags.includes('g') ? flags : flags + 'g');
+                    html = html.replace(globalRe, '<mark>$&</mark>');
+                    backdrop.innerHTML = html + '\n'; // Add trailing newline to match textarea scroll
+                } else {
+                    backdrop.innerHTML = escapeHtml(text) + '\n';
+                    emptyResults.style.display = 'block';
+                }
+
+            } catch (err) {
+                errorMessage.innerText = err.message;
+                errorMessage.style.display = 'block';
+                backdrop.innerHTML = escapeHtml(text) + '\n';
+                emptyResults.style.display = 'block';
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        // Sync flag state
+        flagToggles.forEach(btn => {
+            btn.onclick = () => {
+                btn.classList.toggle('active');
+                flags = Array.from(flagToggles).filter(b => b.classList.contains('active')).map(b => b.dataset.flag).join('');
+                update();
+            }
+        });
+
+        regexField.addEventListener('input', update);
+        testInput.addEventListener('input', update);
+        
+        // Sync scroll
+        testInput.addEventListener('scroll', () => {
+            backdrop.scrollTop = testInput.scrollTop;
+            backdrop.scrollLeft = testInput.scrollLeft;
+        });
+
+        // Initialize
+        update();
+        lucide.createIcons();
+    </script>
+</body>
+</html>

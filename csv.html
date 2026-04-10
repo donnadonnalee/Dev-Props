@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Viewer Pro | Premium Suite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --font-family: 'Inter', sans-serif;
+            --mono-font: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+            padding: 12px;
+        }
+
+        .container { width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .glass-card.drag-over {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-glow);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .back-link { color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: 0.2s; }
+        .back-link:hover { color: var(--accent-color); }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .btn-group { display: flex; gap: 12px; }
+        .btn-action {
+            padding: 10px 16px; background: var(--accent-color); color: white; border: none;
+            border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-action:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
+        .btn-action:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-outline { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); }
+
+        .options-bar { 
+            display: flex; align-items: center; gap: 20px; margin-bottom: 12px; 
+            padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
+        }
+        .option-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+        .option-item input { width: 16px; height: 16px; accent-color: var(--accent-color); cursor: pointer; }
+        .option-item:hover { color: var(--text-primary); }
+
+        .search-area { flex-grow: 1; min-width: 300px; position: relative; }
+        .search-input {
+            width: 100%; padding: 12px 16px 12px 44px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);
+            border-radius: 12px; color: white; font-family: inherit; font-size: 14px; outline: none; transition: 0.2s;
+        }
+        .search-input:focus { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-glow); }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; opacity: 0.6; }
+
+        .table-container { 
+            overflow: auto; border-radius: 8px; border: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2); max-height: calc(100vh - 180px);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+        th { 
+            position: sticky; top: 0; background: #161b22; z-index: 10;
+            padding: 8px 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; font-size: 10px;
+            border-bottom: 2px solid var(--border-color); user-select: none;
+        }
+        .th-content { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .sort-label { flex-grow: 1; cursor: pointer; }
+        .sort-label:hover { color: var(--accent-color); }
+        .wrap-toggle { 
+            padding: 4px; border-radius: 4px; cursor: pointer; opacity: 0.4; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .wrap-toggle:hover { background: rgba(255,255,255,0.1); opacity: 1; }
+        .wrap-toggle.active { color: var(--accent-color); opacity: 1; background: rgba(99, 102, 241, 0.1); }
+
+        td { 
+            padding: 6px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); 
+            white-space: nowrap; min-width: 80px; max-width: 500px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+            font-family: var(--mono-font); font-size: 12px;
+        }
+        td.wrapped { 
+            white-space: pre-wrap; word-break: break-all; overflow: visible; text-overflow: clip;
+            min-width: 250px; max-width: 600px;
+        }
+        tr:hover { background: rgba(255,255,255,0.03); }
+
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; }
+        .btn-nav {
+            padding: 8px 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
+            color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 13px;
+        }
+        .btn-nav:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: var(--text-secondary); }
+        .btn-nav:disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .page-info { font-size: 13px; color: var(--text-secondary); }
+        .empty-state { text-align: center; padding: 100px 40px; color: var(--text-secondary); }
+
+        .loader { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <a href="index.html" class="back-link"><i data-lucide="arrow-left" style="width:14px; height:14px"></i> DASHBOARD</a>
+            <div style="font-size: 11px; opacity: 0.4;">v1.5 Pro High-Density</div>
+        </header>
+
+        <div class="glass-card">
+            <div class="toolbar">
+                <div class="btn-group">
+                    <button class="btn-action" id="btnUpload">
+                        <i data-lucide="file-up" id="btnIcon"></i>
+                        <span id="btnText">CSVを読み込む</span>
+                    </button>
+                    <input type="file" id="fileInput" accept=".csv, .txt, .tsv" style="display:none">
+                    <button class="btn-action btn-outline" id="btnExportJson" disabled>
+                        <i data-lucide="download"></i> JSONで保存
+                    </button>
+                </div>
+
+                <div class="search-area">
+                    <i data-lucide="search" class="search-icon" style="width:18px; height:18px"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="テーブル全体から検索..." disabled>
+                </div>
+
+                <div id="statsInfo" class="page-info hidden">
+                    <span id="totalRows">0</span> Rows found
+                </div>
+            </div>
+
+            <div class="options-bar hidden" id="optionsBar">
+                <label class="option-item">
+                    <input type="checkbox" id="chkHasHeader" checked> タイトル行（ヘッダー）あり
+                </label>
+            </div>
+
+            <div id="emptyView" class="empty-state">
+                <i data-lucide="table" style="width:64px; height:64px; opacity:0.1; margin-bottom:20px"></i>
+                <h3>表示するデータがありません</h3>
+                <p>CSVファイルを読み込んで解析を開始してください。</p>
+            </div>
+
+            <div id="tableView" class="hidden">
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button class="btn-nav" id="btnPrev"><i data-lucide="chevron-left" style="width:16px; height:16px; vertical-align: middle;"></i> 前へ</button>
+                    <span class="page-info" id="pageDisplay">Page 1 of 1</span>
+                    <button class="btn-nav" id="btnNext">次へ <i data-lucide="chevron-right" style="width:16px; height:16px; vertical-align: middle;"></i></button>
+                </div>
+            </div>
+
+            <div class="privacy-note" style="margin-top: 12px; padding: 16px; background: rgba(99, 102, 241, 0.03); border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--accent-color); font-weight: 700; margin-bottom: 4px; font-size: 13px;">
+                    <i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>
+                    <span>Privacy & Security</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 12px; line-height: 1.4; margin: 0;">
+                    CSVファイルの読み込みと解析は100%ローカル（お使いのブラウザ）で実行されます。データがサーバーにアップロードされることはありません。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const btnUpload = document.getElementById('btnUpload');
+        const btnExportJson = document.getElementById('btnExportJson');
+        const searchInput = document.getElementById('searchInput');
+        const tableBody = document.getElementById('tableBody');
+        const tableHead = document.getElementById('tableHead');
+        const emptyView = document.getElementById('emptyView');
+        const tableView = document.getElementById('tableView');
+        const statsInfo = document.getElementById('statsInfo');
+        const optionsBar = document.getElementById('optionsBar');
+        const chkHasHeader = document.getElementById('chkHasHeader');
+        const glassCard = document.querySelector('.glass-card');
+        
+        const pageDisplay = document.getElementById('pageDisplay');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        let rawRows = [];
+        let csvData = [];
+        let filteredData = [];
+        let headers = [];
+        let currentPage = 1;
+        const rowsPerPage = 100;
+        let sortCol = -1;
+        let sortDir = 1;
+
+        let wrappedCols = new Set(); // Indices of columns to wrap
+
+        btnUpload.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        };
+
+        // Drag & Drop event listeners
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+            glassCard.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            glassCard.addEventListener(eventName, () => {
+                glassCard.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            glassCard.addEventListener(eventName, () => {
+                glassCard.classList.remove('drag-over');
+            }, false);
+        });
+
+        glassCard.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            if (file) handleFile(file);
+        }, false);
+
+        async function handleFile(file) {
+            setLoading(true);
+            try {
+                const text = await readFileText(file);
+                parseCSV(text);
+                syncHeaderMode();
+                updateFilteredData();
+                renderTable();
+                
+                emptyView.classList.add('hidden');
+                tableView.classList.remove('hidden');
+                statsInfo.classList.remove('hidden');
+                optionsBar.classList.remove('hidden');
+                searchInput.disabled = false;
+                btnExportJson.disabled = false;
+            } catch (err) {
+                alert('読み込みに失敗しました: ' + err.message);
+            }
+            setLoading(false);
+        }
+
+        async function readFileText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file); // Default is UTF-8
+            });
+        }
+
+        function setLoading(isLoading) {
+            const icon = document.getElementById('btnIcon');
+            const btnText = document.getElementById('btnText');
+            if (isLoading) {
+                icon.setAttribute('data-lucide', 'loader-2');
+                icon.classList.add('loader');
+                btnText.innerText = '解析中...';
+                btnUpload.disabled = true;
+            } else {
+                icon.setAttribute('data-lucide', 'file-up');
+                icon.classList.remove('loader');
+                btnText.innerText = '別のCSVを読み込む';
+                btnUpload.disabled = false;
+            }
+            lucide.createIcons();
+        }
+
+        function parseCSV(text) {
+            const rows = [];
+            let row = [];
+            let cell = '';
+            let inQuote = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i+1];
+
+                if (inQuote) {
+                    if (char === '"' && nextChar === '"') {
+                        cell += '"'; i++;
+                    } else if (char === '"') {
+                        inQuote = false;
+                    } else {
+                        cell += char;
+                    }
+                } else {
+                    if (char === '"') { inQuote = true; }
+                    else if (char === ',' || char === '\t' || char === ';') { row.push(cell); cell = ''; }
+                    else if (char === '\n' || char === '\r') {
+                        row.push(cell);
+                        if (row.length > 0 || cell !== '') rows.push(row);
+                        row = []; cell = '';
+                        if (char === '\r' && nextChar === '\n') i++;
+                    } else { cell += char; }
+                }
+            }
+            if (cell || row.length > 0) { row.push(cell); rows.push(row); }
+            rawRows = rows;
+            wrappedCols.clear();
+        }
+
+        function syncHeaderMode() {
+            if (rawRows.length === 0) return;
+            const hasHeader = chkHasHeader.checked;
+            if (hasHeader) {
+                headers = rawRows[0];
+                csvData = rawRows.slice(1);
+            } else {
+                const maxCol = Math.max(...rawRows.map(r => r.length));
+                headers = Array.from({length: maxCol}, (_, i) => `Col ${i+1}`);
+                csvData = rawRows;
+            }
+        }
+
+        chkHasHeader.onchange = () => {
+            syncHeaderMode();
+            updateFilteredData();
+            renderTable();
+        };
+
+        function updateFilteredData() {
+            const term = searchInput.value.toLowerCase();
+            if (!term) {
+                filteredData = [...csvData];
+            } else {
+                filteredData = csvData.filter(row => 
+                    row.some(cell => String(cell).toLowerCase().includes(term))
+                );
+            }
+            currentPage = 1;
+            document.getElementById('totalRows').innerText = filteredData.length.toLocaleString();
+        }
+
+        function renderTable() {
+            tableHead.innerHTML = '<tr>' + headers.map((h, i) => `
+                <th>
+                    <div class="th-content">
+                        <span class="sort-label" onclick="sort(${i})">
+                            ${h} ${sortCol === i ? (sortDir === 1 ? '▲' : '▼') : ''}
+                        </span>
+                        <div class="wrap-toggle ${wrappedCols.has(i) ? 'active' : ''}" onclick="toggleWrap(${i})" title="折り返しオンオフ">
+                            <i data-lucide="wrap-text" style="width:14px; height:14px"></i>
+                        </div>
+                    </div>
+                </th>
+            `).join('') + '</tr>';
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            tableBody.innerHTML = pageData.map(row => `
+                <tr>${headers.map((_, i) => `
+                    <td class="${wrappedCols.has(i) ? 'wrapped' : ''}">${row[i] !== undefined ? row[i] : ''}</td>
+                `).join('')}</tr>
+            `).join('');
+
+            const maxPage = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+            pageDisplay.innerText = `Page ${currentPage} of ${maxPage}`;
+            btnPrev.disabled = currentPage === 1;
+            btnNext.disabled = currentPage === maxPage;
+            lucide.createIcons();
+        }
+
+        function toggleWrap(idx) {
+            if (wrappedCols.has(idx)) wrappedCols.delete(idx);
+            else wrappedCols.add(idx);
+            renderTable();
+        }
+
+        function sort(idx) {
+            if (sortCol === idx) { sortDir = -sortDir; } else { sortCol = idx; sortDir = 1; }
+            filteredData.sort((a, b) => {
+                const valA = String(a[idx] || '');
+                const valB = String(b[idx] || '');
+                const numA = parseFloat(valA.replace(/,/g, ''));
+                const numB = parseFloat(valB.replace(/,/g, ''));
+                if (!isNaN(numA) && !isNaN(numB)) return (numA - numB) * sortDir;
+                return valA.localeCompare(valB) * sortDir;
+            });
+            renderTable();
+        }
+
+        btnExportJson.onclick = () => {
+            const hasHeader = chkHasHeader.checked;
+            let exportData;
+            
+            if (hasHeader) {
+                exportData = filteredData.map(row => {
+                    const obj = {};
+                    headers.forEach((h, i) => { obj[h] = row[i]; });
+                    return obj;
+                });
+            } else {
+                exportData = filteredData;
+            }
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `csv_export_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        searchInput.oninput = () => { updateFilteredData(); renderTable(); };
+        btnPrev.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+        btnNext.onclick = () => { 
+            const maxPage = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage < maxPage) { currentPage++; renderTable(); } 
+        };
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>

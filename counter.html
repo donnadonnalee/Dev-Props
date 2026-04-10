@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LineCounter | Premium Code Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0d0f17;
+            --card-bg: rgba(30, 35, 54, 0.7);
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --success-color: #10b981;
+            --info-color: #3b82f6;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+            padding: 40px 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            padding: 24px;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .back-link { color: var(--text-secondary); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: 0.2s; margin-bottom: 24px; }
+        .back-link:hover { color: var(--accent-color); }
+        .logo { font-size: 32px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+        .gradient-text {
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 32px; }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .sidebar { display: flex; flex-direction: column; gap: 24px; }
+        .btn-primary {
+            width: 100%; padding: 16px; background: var(--accent-color); color: white; border: none;
+            border-radius: 12px; font-size: 18px; font-weight: 700; display: flex; align-items: center;
+            justify-content: center; gap: 12px; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);
+        }
+        .btn-primary:not(:disabled):hover { background: #4f46e5; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .privacy-note {
+            margin-top: 16px; padding: 16px; background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px;
+            font-size: 12px; color: #93c5fd; line-height: 1.6;
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+
+        .extension-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+        .ext-btn {
+            padding: 10px; border-radius: 8px; border: 1px solid transparent;
+            background: rgba(255,255,255,0.05); color: var(--text-secondary);
+            display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; font-size: 14px;
+        }
+        .ext-btn.active { background: rgba(99, 102, 241, 0.15); border-color: var(--accent-color); color: white; }
+        .ext-btn.wildcard { grid-column: span 2; font-weight: 800; font-size: 15px; }
+
+        .input-text {
+            width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
+            border-radius: 8px; color: white; font-family: inherit; font-size: 14px; margin-top: 12px;
+            outline: none; transition: 0.2s;
+        }
+        .input-text:focus { border-color: var(--accent-color); background: rgba(255,255,255,0.08); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+        .stat-card { padding: 20px; text-align: center; border: 1px solid transparent; transition: 0.3s; }
+        .stat-card.active { border-color: rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.05); }
+        .stat-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em; }
+        .stat-value { font-size: 32px; font-weight: 800; }
+
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+        .progress-bar-bg { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; flex: 1; }
+        .progress-bar-fill { height: 100%; background: var(--accent-color); transition: width 0.3s ease; }
+
+        .loader { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .empty-state { text-align: center; padding: 100px 40px; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .hidden { display: none !important; }
+        .row-hover:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
+        
+        .detail-row { background: rgba(0, 0, 0, 0.2); }
+        .detail-list { padding: 8px 12px 20px 12px; list-style: none; }
+        .detail-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; 
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03);
+            font-size: 13px; font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+        .detail-item:hover { background: rgba(255,255,255,0.05); }
+        .path-text { color: var(--text-secondary); word-break: break-all; margin-right: 16px; }
+        .line-badge { 
+            flex-shrink: 0; padding: 4px 10px; border-radius: 4px; background: rgba(129, 140, 248, 0.1); 
+            color: #818cf8; font-weight: 700; font-size: 12px;
+        }
+        .hot-badge { background: rgba(239, 68, 68, 0.1) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        .chevron { transition: 0.2s; }
+        .expanded .chevron { transform: rotate(90deg); }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .update-pulse { animation: pulse 0.3s ease-out; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header" style="flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 32px;">
+            <a href="index.html" class="back-link" style="margin-bottom: 0;"><i data-lucide="arrow-left" style="width:16px; height:16px"></i> BACK TO DASHBOARD</a>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="logo">
+                    <i data-lucide="file-code-2" style="color:#6366f1"></i>
+                    <span class="gradient-text">LineCounter</span>
+                </div>
+                <div style="font-size: 12px; opacity: 0.5;">v1.9 Optimized</div>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <aside class="sidebar">
+                <div class="glass-card">
+                    <h2 style="font-size:16px; margin-bottom:20px; color: var(--text-secondary);"><i data-lucide="settings-2" style="width:16px; height:16px; vertical-align: middle; margin-right: 8px;"></i> 設定</h2>
+                    
+                    <button class="btn-primary" id="btnSelectFolder">
+                        <i data-lucide="folder-tree" id="btnIcon"></i>
+                        <span id="btnText">フォルダを選択</span>
+                    </button>
+                    <input type="file" id="folderInput" webkitdirectory directory style="display:none">
+
+                    <div class="privacy-note" style="border-color: var(--accent-color); background: rgba(99, 102, 241, 0.05);">
+                        <i data-lucide="shield-check" style="width:20px; height:20px; flex-shrink: 0; color: var(--accent-color);"></i>
+                        <div>
+                            <strong style="color: var(--accent-color);">Privacy & Security</strong><br>
+                            解析は100%ローカルで実行されます。コードが外部に送信されることは一切ありません。
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <div id="extHeader" style="display:flex; justify-content: space-between; align-items: center;">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">対象拡張子</label>
+                            <div id="extQuickSelect" style="display:flex; gap:10px;">
+                                <a href="#" id="selAll" style="font-size:11px; color: var(--accent-color); text-decoration: none;">すべて</a>
+                                <a href="#" id="selNone" style="font-size:11px; color: var(--text-secondary); text-decoration: none;">解除</a>
+                            </div>
+                        </div>
+                        
+                        <div id="wildcardContainer" style="margin-top: 16px;"></div>
+                        <div class="extension-grid" id="extContainer"></div>
+                        
+                        <div style="margin-top: 24px;" id="customExtSection">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">カスタム拡張子</label>
+                            <input type="text" id="customExtInput" class="input-text" placeholder="例: txt, md, php">
+                            <p style="font-size:10px; color: var(--text-secondary); margin-top: 8px;">カンマ区切りで入力してください。</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main id="resultArea">
+                <div class="glass-card empty-state" id="emptyState">
+                    <i data-lucide="search" style="width:48px; height:48px; opacity:0.1; margin-bottom:10px"></i>
+                    <div>
+                        <h3 style="color: white; margin-bottom: 8px;">準備完了</h3>
+                        <p>左側のボタンからフォルダを選択して、解析を開始してください。</p>
+                    </div>
+                </div>
+
+                <div id="results" class="hidden">
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="glass-card stat-card">
+                            <div class="stat-label">総行数</div>
+                            <div class="stat-value" id="valTotalLines">0</div>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <div class="stat-label">対象ファイル数</div>
+                            <div class="stat-value" id="valTotalFiles">0</div>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <div class="stat-label">平均行数 / ファイル</div>
+                            <div class="stat-value" id="valAvgLines">0</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card">
+                        <h3 style="font-size:16px; margin-bottom:20px;">ファイルタイプ別の内訳 <span style="font-size:11px; color:var(--text-secondary); font-weight:400; margin-left:8px;">(クリックでTop10ファイルを表示)</span></h3>
+                        <div class="table-container">
+                            <table id="breakdownTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px"></th>
+                                        <th>拡張子</th>
+                                        <th style="text-align:right">ファイル数</th>
+                                        <th style="text-align:right">合計行数</th>
+                                        <th>構成比</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let wildcardActive = false;
+        let expandedExts = new Set();
+        let allFilesCache = [];
+        
+        const extensions = [
+            { ext: 'java', selected: true, color: '#f89820' },
+            { ext: 'kt', selected: true, color: '#7f52ff' },
+            { ext: 'xml', selected: true, color: '#ff6600' },
+            { ext: 'js', selected: false, color: '#f7df1e' },
+            { ext: 'ts', selected: false, color: '#3178c6' },
+            { ext: 'tsx', selected: false, color: '#61dafb' },
+            { ext: 'cpp', selected: false, color: '#00599c' },
+            { ext: 'h', selected: false, color: '#a0a0a0' },
+            { ext: 'py', selected: false, color: '#3776ab' },
+            { ext: 'css', selected: false, color: '#1572b6' },
+            { ext: 'html', selected: false, color: '#e34f26' },
+            { ext: 'gradle', selected: true, color: '#02303a' },
+            { ext: 'sql', selected: false, color: '#e38c00' },
+            { ext: 'md', selected: false, color: '#000000' }
+        ];
+
+        const IGNORED_FOLDERS = ['node_modules', '.git', 'dist', 'build', '.gradle', '.idea', 'target', 'vendor', '__pycache__', 'out'];
+        const BINARY_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg', 'mp3', 'mp4', 'wav', 'flac', 'ogg', 'webm', 'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'exe', 'dll', 'so', 'dylib', 'bin', 'o', 'obj', 'lib', 'a', 'pdf', 'docx', 'xlsx', 'pptx', 'jar', 'class', 'pyc', 'apk', 'iso', 'dmg']);
+
+        const extContainer = document.getElementById('extContainer');
+        const wildcardContainer = document.getElementById('wildcardContainer');
+        const extQuickSelect = document.getElementById('extQuickSelect');
+        const customExtSection = document.getElementById('customExtSection');
+        const folderInput = document.getElementById('folderInput');
+        const customExtInput = document.getElementById('customExtInput');
+        const btnSelectFolder = document.getElementById('btnSelectFolder');
+        const btnText = document.getElementById('btnText');
+        const btnIcon = document.getElementById('btnIcon');
+        const emptyState = document.getElementById('emptyState');
+        const results = document.getElementById('results');
+        const statsGrid = document.getElementById('statsGrid');
+
+        function renderExts() {
+            wildcardContainer.innerHTML = '';
+            const wBtn = document.createElement('div');
+            wBtn.className = `ext-btn wildcard ${wildcardActive ? 'active' : ''}`;
+            wBtn.innerHTML = `<div style="width:10px; height:10px; border-radius:50%; background: ${wildcardActive ? '#fff' : '#475569'}"></div><span>全ファイルを対象 (*)</span>`;
+            wBtn.onclick = () => { wildcardActive = !wildcardActive; renderExts(); updateDisplay(); };
+            wildcardContainer.appendChild(wBtn);
+
+            if (wildcardActive) {
+                extContainer.classList.add('hidden');
+                extQuickSelect.classList.add('hidden');
+                customExtSection.classList.add('hidden');
+            } else {
+                extContainer.classList.remove('hidden');
+                extQuickSelect.classList.remove('hidden');
+                customExtSection.classList.remove('hidden');
+                extContainer.innerHTML = '';
+                extensions.forEach((e, i) => {
+                    const btn = document.createElement('div');
+                    btn.className = `ext-btn fade-in ${e.selected ? 'active' : ''}`;
+                    btn.innerHTML = `<div style="width:8px; height:8px; border-radius:50%; background: ${e.selected ? e.color : '#475569'}"></div><span>.${e.ext}</span>`;
+                    btn.onclick = () => { e.selected = !e.selected; renderExts(); updateDisplay(); };
+                    extContainer.appendChild(btn);
+                });
+            }
+        }
+
+        document.getElementById('selAll').onclick = (e) => { e.preventDefault(); extensions.forEach(x => x.selected = true); renderExts(); updateDisplay(); };
+        document.getElementById('selNone').onclick = (e) => { e.preventDefault(); extensions.forEach(x => x.selected = false); renderExts(); updateDisplay(); };
+        customExtInput.oninput = () => updateDisplay();
+        btnSelectFolder.onclick = () => folderInput.click();
+
+        async function isBinary(file) {
+            const chunk = await file.slice(0, 8192).arrayBuffer();
+            const bytes = new Uint8Array(chunk);
+            for (let i = 0; i < bytes.length; i++) { if (bytes[i] === 0) return true; }
+            return false;
+        }
+
+        folderInput.onchange = async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            await analyzeFileList(files);
+        };
+
+        async function analyzeFileList(files) {
+            const totalCount = files.length;
+            btnSelectFolder.disabled = true;
+            btnText.innerText = `解析中 (0 / ${totalCount})...`;
+            btnIcon.setAttribute('data-lucide', 'loader-2');
+            btnIcon.classList.add('loader');
+            lucide.createIcons();
+
+            allFilesCache = [];
+            let processedCount = 0;
+
+            // Parallel batch processing
+            const CONCURRENCY = 50;
+            const batches = [];
+            for (let i = 0; i < files.length; i += CONCURRENCY) {
+                batches.push(files.slice(i, i + CONCURRENCY));
+            }
+
+            for (const batch of batches) {
+                await Promise.all(batch.map(async (file) => {
+                    const path = file.webkitRelativePath || file.name;
+                    const isIgnored = IGNORED_FOLDERS.some(f => path.includes(`/${f}/`) || path.startsWith(`${f}/`));
+                    
+                    if (!isIgnored) {
+                        const ext = path.split('.').pop().toLowerCase();
+                        if (!BINARY_EXTS.has(ext)) {
+                            try {
+                                if (!(await isBinary(file))) {
+                                    const text = await file.text();
+                                    const lines = text.split(/\r?\n/).length;
+                                    allFilesCache.push({ ext, lines, path });
+                                }
+                            } catch (err) {}
+                        }
+                    }
+                    processedCount++;
+                }));
+                btnText.innerText = `解析中 (${processedCount} / ${totalCount})...`;
+            }
+
+            emptyState.classList.add('hidden');
+            results.classList.remove('hidden');
+            updateDisplay(true);
+
+            btnSelectFolder.disabled = false;
+            btnText.innerText = 'フォルダを再選択';
+            btnIcon.setAttribute('data-lucide', 'folder-tree');
+            btnIcon.classList.remove('loader');
+            lucide.createIcons();
+        }
+
+        function toggleRow(ext) {
+            if (expandedExts.has(ext)) expandedExts.delete(ext);
+            else expandedExts.add(ext);
+            updateDisplay();
+        }
+
+        function updateDisplay(withAnimation = false) {
+            if (allFilesCache.length === 0) return;
+
+            const selectedExts = new Set();
+            if (!wildcardActive) {
+                extensions.forEach(x => { if(x.selected) selectedExts.add(x.ext); });
+                const customValue = customExtInput.value.trim();
+                if (customValue) {
+                    customValue.split(',').forEach(v => {
+                        const cleaned = v.trim().toLowerCase().replace(/^\./, '');
+                        if (cleaned) selectedExts.add(cleaned);
+                    });
+                }
+            }
+
+            const data = { totalFiles: 0, totalLines: 0, breakdown: {} };
+            allFilesCache.forEach(file => {
+                if (wildcardActive || selectedExts.has(file.ext)) {
+                    data.totalFiles++;
+                    data.totalLines += file.lines;
+                    if (!data.breakdown[file.ext]) data.breakdown[file.ext] = { count: 0, totalLines: 0, files: [] };
+                    data.breakdown[file.ext].count++;
+                    data.breakdown[file.ext].totalLines += file.lines;
+                    data.breakdown[file.ext].files.push(file);
+                }
+            });
+
+            document.getElementById('valTotalLines').innerText = data.totalLines.toLocaleString();
+            document.getElementById('valTotalFiles').innerText = data.totalFiles.toLocaleString();
+            document.getElementById('valAvgLines').innerText = data.totalFiles > 0 ? Math.round(data.totalLines / data.totalFiles).toLocaleString() : 0;
+
+            if (withAnimation) {
+                statsGrid.classList.remove('update-pulse');
+                void statsGrid.offsetWidth;
+                statsGrid.classList.add('update-pulse');
+            }
+
+            const tbody = document.querySelector('#breakdownTable tbody');
+            tbody.innerHTML = '';
+            
+            Object.entries(data.breakdown).sort((a, b) => b[1].totalLines - a[1].totalLines).forEach(([ext, d]) => {
+                const pct = data.totalLines > 0 ? Math.round((d.totalLines / data.totalLines) * 100) : 0;
+                const conf = extensions.find(x => x.ext === ext);
+                const isExpanded = expandedExts.has(ext);
+                
+                const tr = document.createElement('tr');
+                tr.className = `row-hover ${isExpanded ? 'expanded' : ''}`;
+                tr.onclick = () => toggleRow(ext);
+                tr.innerHTML = `
+                    <td><i data-lucide="chevron-right" class="chevron" style="width:16px;height:16px;color:var(--text-secondary)"></i></td>
+                    <td style="font-weight:700">.${ext}</td>
+                    <td style="text-align:right; color:var(--text-secondary)">${d.count.toLocaleString()}</td>
+                    <td style="text-align:right; font-weight:700; color:#818cf8">${d.totalLines.toLocaleString()}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: ${pct}%; background: ${conf?.color || 'var(--accent-color)'}"></div>
+                            </div>
+                            <span style="font-size:11px; width:30px; font-weight:700;">${pct}%</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                if (isExpanded) {
+                    const topFiles = [...d.files].sort((a, b) => b.lines - a.lines).slice(0, 10);
+                    const detailTr = document.createElement('tr');
+                    detailTr.className = 'detail-row';
+                    const detailTd = document.createElement('td');
+                    detailTd.colSpan = 5;
+                    
+                    let itemsHtml = topFiles.map(f => {
+                        const isHot = f.lines > 1000;
+                        return `
+                            <li class="detail-item fade-in">
+                                <span class="path-text">${f.path}</span>
+                                <span class="line-badge ${isHot ? 'hot-badge' : ''}">${f.lines.toLocaleString()} lines ${isHot ? '🔥' : ''}</span>
+                            </li>
+                        `;
+                    }).join('');
+                    
+                    detailTd.innerHTML = `<ul class="detail-list">${itemsHtml}</ul>`;
+                    detailTr.appendChild(detailTd);
+                    tbody.appendChild(detailTr);
+                }
+            });
+            lucide.createIcons();
+        }
+        renderExts();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
