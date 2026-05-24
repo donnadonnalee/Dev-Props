@@ -762,6 +762,12 @@
         .shortcut-item:last-child {
             margin-bottom: 0;
         }
+
+        /* Pop in animation for selected point popup */
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 </head>
 
@@ -928,50 +934,6 @@
                 </div>
             </div>
 
-            <!-- Selected Point Properties -->
-            <div class="sidebar-section" id="selectedPointSection" style="display: none; background: rgba(99, 102, 241, 0.03); border-left: 3px solid var(--accent-color);">
-                <h3 class="section-title">
-                    <span>SELECTED POINT PROPERTIES</span>
-                    <i data-lucide="target" style="width:16px; height:16px; color: var(--accent-color);"></i>
-                </h3>
-                <div class="form-group">
-                    <label class="form-label">Segment Type</label>
-                    <select id="pointTypeSelect" class="input-control">
-                        <option value="M">Move To (Start Point)</option>
-                        <option value="L">Line To (Line)</option>
-                        <option value="Q">Quad Bezier (2nd Degree)</option>
-                        <option value="C">Cubic Bezier (3rd Degree)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Anchor Position (x, y)</label>
-                    <div class="input-row">
-                        <input type="number" id="pointX" class="input-control" placeholder="X">
-                        <input type="number" id="pointY" class="input-control" placeholder="Y">
-                    </div>
-                </div>
-                <!-- Control Point 1 Coordinates (Hidden for M/L) -->
-                <div class="form-group" id="cp1CoordGroup" style="display: none;">
-                    <label class="form-label">Control Point 1 (x, y)</label>
-                    <div class="input-row">
-                        <input type="number" id="pointCp1X" class="input-control" placeholder="CP1 X">
-                        <input type="number" id="pointCp1Y" class="input-control" placeholder="CP1 Y">
-                    </div>
-                </div>
-                <!-- Control Point 2 Coordinates (Hidden for M/L/Q) -->
-                <div class="form-group" id="cp2CoordGroup" style="display: none;">
-                    <label class="form-label">Control Point 2 (x, y)</label>
-                    <div class="input-row">
-                        <input type="number" id="pointCp2X" class="input-control" placeholder="CP2 X">
-                        <input type="number" id="pointCp2Y" class="input-control" placeholder="CP2 Y">
-                    </div>
-                </div>
-                <button class="btn" id="deletePointBtn" style="width: 100%; margin-top: 12px; color: var(--danger-color); border-color: var(--danger-color); background: rgba(248, 81, 73, 0.02);">
-                    <i data-lucide="trash-2" style="width:14px; height:14px"></i>
-                    <span>DELETE POINT</span>
-                </button>
-            </div>
-
             <!-- Path Properties -->
             <div class="sidebar-section">
                 <h3 class="section-title">
@@ -1057,6 +1019,49 @@
 
         <!-- Center Interactive Area -->
         <main class="center-area">
+            <!-- Selected Point Properties Floating Popup Card -->
+            <div id="selectedPointSection" style="display: none; position: absolute; top: 70px; right: 24px; z-index: 150; width: 280px; background: rgba(13, 17, 23, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow); padding: 20px; animation: popIn 0.25s cubic-bezier(0.4, 0, 0.2, 1); border-left: 3px solid var(--accent-color);">
+                <h3 class="section-title">
+                    <span>SELECTED POINT PROPERTIES</span>
+                    <i data-lucide="target" style="width:16px; height:16px; color: var(--accent-color);"></i>
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">Segment Type</label>
+                    <select id="pointTypeSelect" class="input-control">
+                        <option value="M">Move To (Start Point)</option>
+                        <option value="L">Line To (Line)</option>
+                        <option value="Q">Quad Bezier (2nd Degree)</option>
+                        <option value="C">Cubic Bezier (3rd Degree)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">Anchor Position (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointX" class="input-control" placeholder="X">
+                        <input type="number" id="pointY" class="input-control" placeholder="Y">
+                    </div>
+                </div>
+                <!-- Control Point 1 Coordinates (Hidden for M/L) -->
+                <div class="form-group" id="cp1CoordGroup" style="display: none; margin-top: 12px;">
+                    <label class="form-label">Control Point 1 (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointCp1X" class="input-control" placeholder="CP1 X">
+                        <input type="number" id="pointCp1Y" class="input-control" placeholder="CP1 Y">
+                    </div>
+                </div>
+                <!-- Control Point 2 Coordinates (Hidden for M/L/Q) -->
+                <div class="form-group" id="cp2CoordGroup" style="display: none; margin-top: 12px;">
+                    <label class="form-label">Control Point 2 (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointCp2X" class="input-control" placeholder="CP2 X">
+                        <input type="number" id="pointCp2Y" class="input-control" placeholder="CP2 Y">
+                    </div>
+                </div>
+                <button class="btn" id="deletePointBtn" style="width: 100%; margin-top: 16px; color: var(--danger-color); border-color: var(--danger-color); background: rgba(248, 81, 73, 0.02);">
+                    <i data-lucide="trash-2" style="width:14px; height:14px"></i>
+                    <span>DELETE POINT</span>
+                </button>
+            </div>
             <!-- Layers Tab Bar -->
             <div class="layers-header">
                 <div id="layersTabContainer" style="display: flex; gap: 6px;">
