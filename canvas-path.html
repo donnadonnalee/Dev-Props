@@ -1,0 +1,2801 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Path Creator - DevToolbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --accent-hover: #4f46e5;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.2);
+            --danger-color: #f85149;
+            --danger-glow: rgba(248, 81, 73, 0.15);
+            --success-color: #3fb950;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'Fira Code', 'Courier New', monospace;
+            --sidebar-width: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.06) 0px, transparent 50%);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Top Nav */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: rgba(13, 17, 23, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #818cf8 0%, #c175ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Workspace Grid */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Sidebars */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(22, 27, 34, 0.4);
+            backdrop-filter: blur(8px);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-right {
+            border-right: none;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-control {
+            width: 100%;
+            background: rgba(13, 17, 23, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        select.input-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b949e' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 36px;
+        }
+
+        /* Checkbox & Switch toggle */
+        .switch-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .switch-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-secondary);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: white;
+        }
+
+        /* Color Input wrapper */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(13, 17, 23, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px 10px;
+        }
+
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            padding: 0;
+            background: none;
+        }
+
+        /* Range Slider */
+        .range-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-glow);
+            transition: transform 0.1s;
+        }
+
+        .range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .range-value {
+            font-size: 12px;
+            font-family: var(--font-mono);
+            min-width: 32px;
+            text-align: right;
+            color: var(--text-secondary);
+        }
+
+        /* Drawing tools list */
+        .tool-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .tool-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tool-btn.active {
+            color: white;
+            border-color: var(--accent-color);
+            background: rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+        }
+
+        /* File Dropzone */
+        .dropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.01);
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--accent-color);
+            background: rgba(99, 102, 241, 0.03);
+            color: var(--text-primary);
+        }
+
+        .dropzone i {
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .image-preview-container {
+            margin-top: 12px;
+            background: rgba(13, 17, 23, 0.6);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .image-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+            color: var(--text-secondary);
+        }
+
+        .remove-image-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-image-btn:hover {
+            background: rgba(248, 81, 73, 0.1);
+        }
+
+        /* Main Center Workspace */
+        .center-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #090c10;
+            position: relative;
+        }
+
+        /* Layer tabs */
+        .layers-header {
+            display: flex;
+            align-items: center;
+            background: rgba(13, 17, 23, 0.8);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px 0;
+            overflow-x: auto;
+            gap: 6px;
+        }
+
+        .layer-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .layer-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .layer-tab.active {
+            color: var(--text-primary);
+            background: var(--card-bg);
+            border-color: var(--border-color);
+            border-bottom: 2px solid var(--accent-color);
+            font-weight: 600;
+        }
+
+        .layer-visibility {
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            transition: 0.15s;
+        }
+
+        .layer-visibility:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .layer-delete {
+            opacity: 0.5;
+            transition: 0.2s;
+            margin-left: 4px;
+        }
+
+        .layer-delete:hover {
+            opacity: 1;
+            color: var(--danger-color);
+        }
+
+        .add-layer-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: none;
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 6px;
+            margin-left: 8px;
+            transition: 0.2s;
+        }
+
+        .add-layer-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Canvas Wrapper & Canvas */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            padding: 32px;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #161b22;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            overflow: visible;
+        }
+
+        #editorCanvas {
+            display: block;
+            cursor: crosshair;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Top Importer Drawer */
+        .importer-drawer {
+            background: rgba(13, 17, 23, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 24px;
+            display: none;
+            animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .importer-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .importer-textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(13, 17, 23, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+        .importer-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .importer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .importer-feedback {
+            font-size: 13px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .importer-feedback.success { color: var(--success-color); }
+        .importer-feedback.error { color: var(--danger-color); }
+
+        /* Right Exporter Panel */
+        .exporter-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(13, 17, 23, 0.4);
+        }
+
+        .exporter-tab {
+            flex: 1;
+            padding: 12px 6px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .exporter-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .exporter-tab.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .code-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #090c10;
+        }
+
+        .code-pre {
+            flex: 1;
+            padding: 20px;
+            margin: 0;
+            overflow: auto;
+            color: #c9d1d9;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre;
+        }
+
+        .code-actions {
+            padding: 12px 16px;
+            background: rgba(13, 17, 23, 0.8);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* Canvas Status Info */
+        .canvas-info-overlay {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            display: flex;
+            gap: 16px;
+            z-index: 50;
+            pointer-events: none;
+            color: var(--text-secondary);
+        }
+
+        .canvas-info-item strong {
+            color: var(--text-primary);
+        }
+
+        /* Bottom Controls / Keyboard Shortcuts Info */
+        .kbd-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .shortcut-item:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="index.html" class="back-btn">
+                <i data-lucide="arrow-left" style="width:16px; height:16px"></i>
+                <span>TOOLBOX</span>
+            </a>
+            <h1 class="nav-title">
+                <i data-lucide="pen-tool" style="color:#6366f1"></i>
+                <span class="gradient-text">Canvas Path Creator</span>
+            </h1>
+        </div>
+        <div class="nav-right">
+            <button class="btn" id="toggleImporterBtn">
+                <i data-lucide="code-2" style="width: 18px; height: 18px;"></i>
+                <span>CODE IMPORTER</span>
+            </button>
+            <button class="btn btn-primary" id="copyCodeNavBtn">
+                <i data-lucide="copy" style="width: 18px; height: 18px;"></i>
+                <span>COPY ACTIVE CODE</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Importer Drawer -->
+    <div class="importer-drawer" id="importerDrawer">
+        <h3 class="importer-title">
+            <i data-lucide="import" style="width: 18px; height: 18px; color: var(--accent-color);"></i>
+            <span>Import Canvas Code</span>
+        </h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            JS (Canvas 2D Context) または Java (Android Path / AWT Path2D) の描画命令コードを貼り付けて、「パーズ＆インポート」をクリックしてください。アクティブレイヤーに読み込まれます。
+        </p>
+        <textarea class="importer-textarea" id="importerInput" placeholder="// Paste JS/Java Draw Commands here...&#10;ctx.moveTo(10, 10);&#10;ctx.quadraticCurveTo(50, 90, 100, 10);&#10;path.lineTo(100, 200);"></textarea>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="importer-feedback" id="importerFeedback"></div>
+            <div class="importer-actions">
+                <button class="btn" id="closeImporterBtn">CANCEL</button>
+                <button class="btn btn-primary" id="parseCodeBtn">PARSE & IMPORT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace Splitter -->
+    <div class="workspace">
+        <!-- Left Sidebar (Canvas & Draw Controls) -->
+        <aside class="sidebar">
+            <!-- Canvas Configuration -->
+            <div class="sidebar-section">
+                <h3 class="section-title">
+                    <span>CANVAS & GRID CONFIG</span>
+                    <i data-lucide="settings" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">Canvas Size (px)</label>
+                    <div class="input-row">
+                        <input type="number" id="canvasWidthInput" class="input-control" value="500" min="50" max="2000" placeholder="Width">
+                        <input type="number" id="canvasHeightInput" class="input-control" value="500" min="50" max="2000" placeholder="Height">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grid Spacing</label>
+                    <div class="range-wrapper">
+                        <input type="range" id="gridSpacingInput" class="range-slider" min="5" max="100" value="20" step="5">
+                        <span class="range-value" id="gridSpacingValue">20px</span>
+                    </div>
+                </div>
+                <div class="switch-group" id="snapToggleGroup">
+                    <span class="switch-label">Snap to Grid</span>
+                    <label class="switch">
+                        <input type="checkbox" id="snapToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grid Line Color</label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="gridColorInput" class="color-preview" value="#2a3341">
+                        <span style="font-size: 13px; font-family: var(--font-mono); color: var(--text-secondary);" id="gridColorText">#2A3341</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Background Reference Image -->
+            <div class="sidebar-section">
+                <h3 class="section-title">
+                    <span>REFERENCE IMAGE</span>
+                    <i data-lucide="image" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="dropzone" id="imageDropzone">
+                    <i data-lucide="upload-cloud" style="width: 24px; height: 24px;"></i>
+                    <p>Click or drag image here</p>
+                    <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+                </div>
+                <div id="imageControls" style="display: none; margin-top: 16px;">
+                    <div class="image-preview-container">
+                        <i data-lucide="file-image" style="width:16px; height:16px; color: var(--accent-color);"></i>
+                        <span class="image-name" id="refImageName">example.png</span>
+                        <button class="remove-image-btn" id="removeImageBtn" title="Remove image">
+                            <i data-lucide="trash-2" style="width:16px; height:16px"></i>
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label">Image Opacity</label>
+                        <div class="range-wrapper">
+                            <input type="range" id="imageOpacityInput" class="range-slider" min="10" max="100" value="50">
+                            <span class="range-value" id="imageOpacityValue">50%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Image Scale</label>
+                        <div class="range-wrapper">
+                            <input type="range" id="imageScaleInput" class="range-slider" min="10" max="300" value="100" step="5">
+                            <span class="range-value" id="imageScaleValue">100%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Offset X / Y (px)</label>
+                        <div class="input-row">
+                            <input type="number" id="imageOffsetX" class="input-control" value="0">
+                            <input type="number" id="imageOffsetY" class="input-control" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Path Drawing Tools -->
+            <div class="sidebar-section">
+                <h3 class="section-title">
+                    <span>DRAWING MODE</span>
+                    <i data-lucide="edit-3" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="tool-btn-grid">
+                    <button class="tool-btn active" id="toolSelect" title="点を選択・ドラッグ (V)">
+                        <i data-lucide="cursor" style="width:20px; height:20px"></i>
+                        <span>SELECT</span>
+                    </button>
+                    <button class="tool-btn" id="toolLine" title="直線を追加 (L)">
+                        <i data-lucide="minus" style="width:20px; height:20px"></i>
+                        <span>LINE</span>
+                    </button>
+                    <button class="tool-btn" id="toolQuad" title="2次ベジエ曲線を追加 (Q)">
+                        <i data-lucide="git-commit" style="width:20px; height:20px"></i>
+                        <span>QUAD BEZIER</span>
+                    </button>
+                    <button class="tool-btn" id="toolCubic" title="3次ベジエ曲線を追加 (C)">
+                        <i data-lucide="activity" style="width:20px; height:20px"></i>
+                        <span>CUBIC BEZIER</span>
+                    </button>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn" id="closePathBtn" style="flex: 1; padding: 8px; font-size: 12px;" title="現在のパスを閉じる (Z)">
+                        <i data-lucide="corner-down-left" style="width:14px; height:14px"></i>
+                        <span>CLOSE PATH</span>
+                    </button>
+                    <button class="btn" id="clearPointsBtn" style="flex: 1; padding: 8px; font-size: 12px; color: var(--danger-color);" title="すべての点を取り除く">
+                        <i data-lucide="refresh-cw" style="width:14px; height:14px"></i>
+                        <span>RESET LAYER</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selected Point Properties -->
+            <div class="sidebar-section" id="selectedPointSection" style="display: none; background: rgba(99, 102, 241, 0.03); border-left: 3px solid var(--accent-color);">
+                <h3 class="section-title">
+                    <span>SELECTED POINT PROPERTIES</span>
+                    <i data-lucide="target" style="width:16px; height:16px; color: var(--accent-color);"></i>
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">Segment Type</label>
+                    <select id="pointTypeSelect" class="input-control">
+                        <option value="M">Move To (Start Point)</option>
+                        <option value="L">Line To (Line)</option>
+                        <option value="Q">Quad Bezier (2nd Degree)</option>
+                        <option value="C">Cubic Bezier (3rd Degree)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Anchor Position (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointX" class="input-control" placeholder="X">
+                        <input type="number" id="pointY" class="input-control" placeholder="Y">
+                    </div>
+                </div>
+                <!-- Control Point 1 Coordinates (Hidden for M/L) -->
+                <div class="form-group" id="cp1CoordGroup" style="display: none;">
+                    <label class="form-label">Control Point 1 (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointCp1X" class="input-control" placeholder="CP1 X">
+                        <input type="number" id="pointCp1Y" class="input-control" placeholder="CP1 Y">
+                    </div>
+                </div>
+                <!-- Control Point 2 Coordinates (Hidden for M/L/Q) -->
+                <div class="form-group" id="cp2CoordGroup" style="display: none;">
+                    <label class="form-label">Control Point 2 (x, y)</label>
+                    <div class="input-row">
+                        <input type="number" id="pointCp2X" class="input-control" placeholder="CP2 X">
+                        <input type="number" id="pointCp2Y" class="input-control" placeholder="CP2 Y">
+                    </div>
+                </div>
+                <button class="btn" id="deletePointBtn" style="width: 100%; margin-top: 12px; color: var(--danger-color); border-color: var(--danger-color); background: rgba(248, 81, 73, 0.02);">
+                    <i data-lucide="trash-2" style="width:14px; height:14px"></i>
+                    <span>DELETE POINT</span>
+                </button>
+            </div>
+
+            <!-- Path Properties -->
+            <div class="sidebar-section">
+                <h3 class="section-title">
+                    <span>LAYER VISUAL PROPERTIES</span>
+                    <i data-lucide="sliders" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">Stroke Width (px)</label>
+                    <div class="range-wrapper">
+                        <input type="range" id="strokeWidthInput" class="range-slider" min="1" max="20" value="2">
+                        <span class="range-value" id="strokeWidthValue">2px</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Stroke Color</label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="strokeColorInput" class="color-preview" value="#6366f1">
+                        <span style="font-size: 13px; font-family: var(--font-mono); color: var(--text-secondary);" id="strokeColorText">#6366F1</span>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">Stroke Opacity</label>
+                    <div class="range-wrapper">
+                        <input type="range" id="strokeOpacityInput" class="range-slider" min="0" max="100" value="100">
+                        <span class="range-value" id="strokeOpacityValue">100%</span>
+                    </div>
+                </div>
+                <div class="switch-group" id="fillToggleGroup" style="margin-top: 16px;">
+                    <span class="switch-label">Fill Layer Shape</span>
+                    <label class="switch">
+                        <input type="checkbox" id="fillToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="form-group" id="fillColorGroup" style="display: none;">
+                    <label class="form-label">Fill Color</label>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="fillColorInput" class="color-preview" value="#818cf8">
+                        <span style="font-size: 13px; font-family: var(--font-mono); color: var(--text-secondary);" id="fillColorText">#818CF8</span>
+                    </div>
+                </div>
+                <div class="form-group" id="fillOpacityGroup" style="display: none; margin-top: 12px;">
+                    <label class="form-label">Fill Opacity</label>
+                    <div class="range-wrapper">
+                        <input type="range" id="fillOpacityInput" class="range-slider" min="0" max="100" value="100">
+                        <span class="range-value" id="fillOpacityValue">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Shortcuts panel -->
+            <div class="sidebar-section" style="border-bottom: none;">
+                <h3 class="section-title">
+                    <span>KEYBOARD SHORTCUTS</span>
+                    <i data-lucide="help-circle" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="shortcut-item">
+                    <span>Select Tool</span>
+                    <span class="kbd-badge">V</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Line Tool</span>
+                    <span class="kbd-badge">L</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Quad Bezier Tool</span>
+                    <span class="kbd-badge">Q</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Cubic Bezier Tool</span>
+                    <span class="kbd-badge">C</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Delete Selected Point</span>
+                    <span class="kbd-badge">Del</span>
+                </div>
+                <div class="shortcut-item">
+                    <span>Undo last point / action</span>
+                    <span class="kbd-badge">Ctrl + Z</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Interactive Area -->
+        <main class="center-area">
+            <!-- Layers Tab Bar -->
+            <div class="layers-header">
+                <div id="layersTabContainer" style="display: flex; gap: 6px;">
+                    <!-- Rendered layers go here dynamically -->
+                </div>
+                <button class="add-layer-btn" id="addNewLayerBtn">
+                    <i data-lucide="plus" style="width:14px; height:14px"></i>
+                    <span>ADD LAYER</span>
+                </button>
+            </div>
+
+            <!-- Main Interactive Canvas container -->
+            <div class="canvas-container">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="editorCanvas" width="500" height="500"></canvas>
+                </div>
+            </div>
+
+            <!-- Canvas Info overlay -->
+            <div class="canvas-info-overlay">
+                <div class="canvas-info-item">
+                    <span>X: </span><strong id="cursorCoordX">0</strong>
+                </div>
+                <div class="canvas-info-item">
+                    <span>Y: </span><strong id="cursorCoordY">0</strong>
+                </div>
+                <div class="canvas-info-item">
+                    <span>Selected: </span><strong id="selectedPointName">None</strong>
+                </div>
+                <div class="canvas-info-item" style="color: var(--accent-color);">
+                    <span>Hold <span class="kbd-badge">Shift</span> to temporarily disable grid snapping</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar (Real-time Code Exporter) -->
+        <aside class="sidebar sidebar-right">
+            <!-- Custom Variables Offset Injection -->
+            <div class="sidebar-section">
+                <h3 class="section-title">
+                    <span>VARIABLE INJECTION</span>
+                    <i data-lucide="variable" style="width:16px; height:16px"></i>
+                </h3>
+                <div class="form-group">
+                    <label class="form-label">Origin Reference Point</label>
+                    <div class="input-row">
+                        <div>
+                            <span class="form-label" style="font-size: 10px; margin-bottom: 2px;">Anchor X</span>
+                            <input type="number" id="originX" class="input-control" value="0">
+                        </div>
+                        <div>
+                            <span class="form-label" style="font-size: 10px; margin-bottom: 2px;">Anchor Y</span>
+                            <input type="number" id="originY" class="input-control" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="switch-group" id="useOriginVarGroup" style="margin-top: 12px;">
+                    <span class="switch-label">Inject X/Y Variables</span>
+                    <label class="switch">
+                        <input type="checkbox" id="injectOffsetsToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="offsetVariablesPanel">
+                    <div class="form-group">
+                        <label class="form-label">X Coordinate Variable</label>
+                        <input type="text" id="varPrefixX" class="input-control" value="x" placeholder="e.g. x, startX">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Y Coordinate Variable</label>
+                        <input type="text" id="varPrefixY" class="input-control" value="y" placeholder="e.g. y, startY">
+                    </div>
+                    <div class="switch-group" id="useScaleVarGroup">
+                        <span class="switch-label">Inject Scale Factor</span>
+                        <label class="switch">
+                            <input type="checkbox" id="injectScaleToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="scaleVariableContainer" style="display: none;">
+                        <label class="form-label">Scale Variable Name</label>
+                        <input type="text" id="varScaleName" class="input-control" value="scale" placeholder="e.g. scale, factor">
+                        <div class="switch-group" style="margin-top: 8px;">
+                            <span class="switch-label" style="font-size: 11px;">Int Casting (Java)</span>
+                            <label class="switch">
+                                <input type="checkbox" id="castToIntToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time code outputs -->
+            <div class="code-container">
+                <div class="exporter-tabs">
+                    <button class="exporter-tab active" data-format="android">Java (Android)</button>
+                    <button class="exporter-tab" data-format="js">JS (Canvas)</button>
+                    <button class="exporter-tab" data-format="awt">Java (AWT)</button>
+                    <button class="exporter-tab" data-format="svg">SVG Path</button>
+                </div>
+                <pre class="code-pre" id="codeOutputContainer"><code id="codeOutput"></code></pre>
+                <div class="code-actions">
+                    <button class="btn btn-primary" id="copyCodeBtn">
+                        <i data-lucide="copy" style="width:16px; height:16px"></i>
+                        <span>COPY CODE</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Scripting for application behavior -->
+    <script>
+        // Init Lucide
+        lucide.createIcons();
+
+        // Model & State Structure
+        let state = {
+            canvasWidth: 500,
+            canvasHeight: 500,
+            gridSpacing: 20,
+            gridColor: '#2a3341',
+            snapToGrid: true,
+            drawMode: 'select', // select, line, quad, cubic
+            
+            // Reference Image State
+            refImage: null,
+            refImageName: '',
+            refImageOpacity: 0.5,
+            refImageScale: 1.0,
+            refImageOffsetX: 0,
+            refImageOffsetY: 0,
+
+            // Vector Layers List
+            layers: [
+                {
+                    id: 1,
+                    name: 'Layer 1',
+                    visible: true,
+                    opacity: 1.0,
+                    strokeColor: '#6366f1',
+                    strokeOpacity: 1.0,
+                    fillColor: '#818cf8',
+                    fillOpacity: 1.0,
+                    strokeWidth: 2,
+                    isFilled: false,
+                    isClosed: false,
+                    commands: [] // elements like { type: 'M'|'L'|'Q'|'C', x, y, cp1x, cp1y, cp2x, cp2y }
+                }
+            ],
+            activeLayerId: 1,
+            selectedPoint: null, // { layerId, commandIndex, type: 'main' | 'cp1' | 'cp2' }
+            history: [], // for undo support
+            currentFormat: 'android', // android, js, awt, svg
+        };
+
+        // DOM elements
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+
+        // Form elements - Grid Config
+        const canvasWidthInput = document.getElementById('canvasWidthInput');
+        const canvasHeightInput = document.getElementById('canvasHeightInput');
+        const gridSpacingInput = document.getElementById('gridSpacingInput');
+        const gridSpacingValue = document.getElementById('gridSpacingValue');
+        const snapToggle = document.getElementById('snapToggle');
+        const gridColorInput = document.getElementById('gridColorInput');
+        const gridColorText = document.getElementById('gridColorText');
+
+        // Reference Image controls
+        const imageDropzone = document.getElementById('imageDropzone');
+        const imageFileInput = document.getElementById('imageFileInput');
+        const imageControls = document.getElementById('imageControls');
+        const refImageName = document.getElementById('refImageName');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const imageOpacityInput = document.getElementById('imageOpacityInput');
+        const imageOpacityValue = document.getElementById('imageOpacityValue');
+        const imageScaleInput = document.getElementById('imageScaleInput');
+        const imageScaleValue = document.getElementById('imageScaleValue');
+        const imageOffsetX = document.getElementById('imageOffsetX');
+        const imageOffsetY = document.getElementById('imageOffsetY');
+
+        // Draw Modes
+        const toolSelect = document.getElementById('toolSelect');
+        const toolLine = document.getElementById('toolLine');
+        const toolQuad = document.getElementById('toolQuad');
+        const toolCubic = document.getElementById('toolCubic');
+        const closePathBtn = document.getElementById('closePathBtn');
+        const clearPointsBtn = document.getElementById('clearPointsBtn');
+
+        // Properties inputs
+        const strokeWidthInput = document.getElementById('strokeWidthInput');
+        const strokeWidthValue = document.getElementById('strokeWidthValue');
+        const strokeColorInput = document.getElementById('strokeColorInput');
+        const strokeColorText = document.getElementById('strokeColorText');
+        const strokeOpacityInput = document.getElementById('strokeOpacityInput');
+        const strokeOpacityValue = document.getElementById('strokeOpacityValue');
+        const fillToggle = document.getElementById('fillToggle');
+        const fillColorGroup = document.getElementById('fillColorGroup');
+        const fillColorInput = document.getElementById('fillColorInput');
+        const fillColorText = document.getElementById('fillColorText');
+        const fillOpacityGroup = document.getElementById('fillOpacityGroup');
+        const fillOpacityInput = document.getElementById('fillOpacityInput');
+        const fillOpacityValue = document.getElementById('fillOpacityValue');
+
+        // Selected Point UI bindings
+        const selectedPointSection = document.getElementById('selectedPointSection');
+        const pointTypeSelect = document.getElementById('pointTypeSelect');
+        const pointX = document.getElementById('pointX');
+        const pointY = document.getElementById('pointY');
+        const cp1CoordGroup = document.getElementById('cp1CoordGroup');
+        const pointCp1X = document.getElementById('pointCp1X');
+        const pointCp1Y = document.getElementById('pointCp1Y');
+        const cp2CoordGroup = document.getElementById('cp2CoordGroup');
+        const pointCp2X = document.getElementById('pointCp2X');
+        const pointCp2Y = document.getElementById('pointCp2Y');
+        const deletePointBtn = document.getElementById('deletePointBtn');
+
+        // Layer managers
+        const layersTabContainer = document.getElementById('layersTabContainer');
+        const addNewLayerBtn = document.getElementById('addNewLayerBtn');
+
+        // Variable Injection Panel
+        const originXInput = document.getElementById('originX');
+        const originYInput = document.getElementById('originY');
+        const injectOffsetsToggle = document.getElementById('injectOffsetsToggle');
+        const offsetVariablesPanel = document.getElementById('offsetVariablesPanel');
+        const varPrefixX = document.getElementById('varPrefixX');
+        const varPrefixY = document.getElementById('varPrefixY');
+        const injectScaleToggle = document.getElementById('injectScaleToggle');
+        const scaleVariableContainer = document.getElementById('scaleVariableContainer');
+        const varScaleName = document.getElementById('varScaleName');
+        const castToIntToggle = document.getElementById('castToIntToggle');
+
+        // Code Exporter
+        const codeOutput = document.getElementById('codeOutput');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const copyCodeNavBtn = document.getElementById('copyCodeNavBtn');
+
+        // Drawer Importer
+        const toggleImporterBtn = document.getElementById('toggleImporterBtn');
+        const importerDrawer = document.getElementById('importerDrawer');
+        const closeImporterBtn = document.getElementById('closeImporterBtn');
+        const parseCodeBtn = document.getElementById('parseCodeBtn');
+        const importerInput = document.getElementById('importerInput');
+        const importerFeedback = document.getElementById('importerFeedback');
+
+        // Coordinates status
+        const cursorCoordX = document.getElementById('cursorCoordX');
+        const cursorCoordY = document.getElementById('cursorCoordY');
+        const selectedPointName = document.getElementById('selectedPointName');
+
+        // Dragging variable
+        let isDragging = false;
+        let isDraggingRefImage = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let shiftPressed = false;
+
+        // Undo history helper
+        function pushHistory() {
+            if (state.history.length > 50) {
+                state.history.shift();
+            }
+            state.history.push(JSON.stringify({
+                layers: state.layers,
+                activeLayerId: state.activeLayerId
+            }));
+        }
+
+        function undo() {
+            if (state.history.length > 0) {
+                const prev = JSON.parse(state.history.pop());
+                state.layers = prev.layers;
+                state.activeLayerId = prev.activeLayerId;
+                state.selectedPoint = null;
+                selectedPointName.innerText = 'None';
+                updateSelectedPointPanel();
+                
+                // Keep active properties aligned with loaded layer
+                const activeLayer = getActiveLayer();
+                if (activeLayer) {
+                    strokeColorInput.value = activeLayer.strokeColor;
+                    strokeColorText.innerText = activeLayer.strokeColor.toUpperCase();
+                    strokeWidthInput.value = activeLayer.strokeWidth;
+                    strokeWidthValue.innerText = activeLayer.strokeWidth + 'px';
+                    
+                    const sOpacityVal = Math.round((activeLayer.strokeOpacity !== undefined ? activeLayer.strokeOpacity : 1.0) * 100);
+                    strokeOpacityInput.value = sOpacityVal;
+                    strokeOpacityValue.innerText = sOpacityVal + '%';
+
+                    fillToggle.checked = activeLayer.isFilled;
+                    fillColorInput.value = activeLayer.fillColor;
+                    fillColorText.innerText = activeLayer.fillColor.toUpperCase();
+                    
+                    const fOpacityVal = Math.round((activeLayer.fillOpacity !== undefined ? activeLayer.fillOpacity : 1.0) * 100);
+                    fillOpacityInput.value = fOpacityVal;
+                    fillOpacityValue.innerText = fOpacityVal + '%';
+
+                    if (activeLayer.isFilled) {
+                        fillColorGroup.style.display = 'block';
+                        fillOpacityGroup.style.display = 'block';
+                    } else {
+                        fillColorGroup.style.display = 'none';
+                        fillOpacityGroup.style.display = 'none';
+                    }
+                }
+                
+                renderLayersList();
+                draw();
+                generateCode();
+            }
+        }
+
+        // Active Layer Getter
+        function getActiveLayer() {
+            return state.layers.find(l => l.id === state.activeLayerId) || state.layers[0];
+        }
+
+        // Synchronize selected anchor properties to visual controls panel
+        function updateSelectedPointPanel() {
+            const activeLayer = getActiveLayer();
+            if (!state.selectedPoint || !activeLayer || state.selectedPoint.layerId !== activeLayer.id) {
+                selectedPointSection.style.display = 'none';
+                return;
+            }
+
+            const cmdIndex = state.selectedPoint.commandIndex;
+            const cmd = activeLayer.commands[cmdIndex];
+            if (!cmd) {
+                selectedPointSection.style.display = 'none';
+                return;
+            }
+
+            selectedPointSection.style.display = 'block';
+
+            // First point cannot be changed from MoveTo (M)
+            if (cmdIndex === 0) {
+                pointTypeSelect.value = 'M';
+                pointTypeSelect.disabled = true;
+            } else {
+                pointTypeSelect.value = cmd.type;
+                pointTypeSelect.disabled = false;
+            }
+
+            // Sync coordinate values
+            pointX.value = Math.round(cmd.x);
+            pointY.value = Math.round(cmd.y);
+
+            // Hide/Show control point coordinate groups based on type
+            if (cmd.type === 'Q') {
+                cp1CoordGroup.style.display = 'block';
+                cp2CoordGroup.style.display = 'none';
+                pointCp1X.value = Math.round(cmd.cp1x);
+                pointCp1Y.value = Math.round(cmd.cp1y);
+            } else if (cmd.type === 'C') {
+                cp1CoordGroup.style.display = 'block';
+                cp2CoordGroup.style.display = 'block';
+                pointCp1X.value = Math.round(cmd.cp1x);
+                pointCp1Y.value = Math.round(cmd.cp1y);
+                pointCp2X.value = Math.round(cmd.cp2x);
+                pointCp2Y.value = Math.round(cmd.cp2y);
+            } else {
+                cp1CoordGroup.style.display = 'none';
+                cp2CoordGroup.style.display = 'none';
+            }
+        }
+
+        // Initialize Canvas Rendering & Sizing
+        function updateCanvasSize() {
+            const w = parseInt(canvasWidthInput.value) || 500;
+            const h = parseInt(canvasHeightInput.value) || 500;
+            state.canvasWidth = w;
+            state.canvasHeight = h;
+            canvas.width = w;
+            canvas.height = h;
+            canvasWrapper.style.width = w + 'px';
+            canvasWrapper.style.height = h + 'px';
+            draw();
+        }
+
+        // Helper to convert hex to rgba
+        function hexToRgba(hex, alpha) {
+            if (!hex.startsWith('#')) return hex;
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // Snap coordinates
+        function snap(val, step) {
+            if (!state.snapToGrid || shiftPressed) return val;
+            return Math.round(val / step) * step;
+        }
+
+        // Get Relative Mouse Position on Canvas
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Scaling coordinates due to boundary differences
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        // Draw routine
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Reference Image under everything
+            if (state.refImage) {
+                ctx.save();
+                ctx.globalAlpha = state.refImageOpacity;
+                
+                // Apply Image Scaling & Offset transforms
+                const iw = state.refImage.width * state.refImageScale;
+                const ih = state.refImage.height * state.refImageScale;
+                
+                ctx.drawImage(state.refImage, state.refImageOffsetX, state.refImageOffsetY, iw, ih);
+                ctx.restore();
+            }
+
+            // 2. Draw Grid Lines
+            ctx.strokeStyle = state.gridColor;
+            ctx.lineWidth = 0.8;
+            
+            // Vertical lines
+            for (let x = 0; x <= canvas.width; x += state.gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y <= canvas.height; y += state.gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // 3. Draw Anchor / Origin Reference
+            const ox = parseInt(originXInput.value) || 0;
+            const oy = parseInt(originYInput.value) || 0;
+            ctx.strokeStyle = '#3fb950';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(ox - 10, oy);
+            ctx.lineTo(ox + 10, oy);
+            ctx.moveTo(ox, oy - 10);
+            ctx.lineTo(ox, oy + 10);
+            ctx.stroke();
+
+            // 4. Draw Vector Layers (Render bottom-up, active layer highlighted)
+            state.layers.forEach(layer => {
+                if (!layer.visible) return;
+                
+                const isActive = (layer.id === state.activeLayerId);
+                
+                ctx.save();
+                ctx.globalAlpha = layer.opacity || 1.0;
+                ctx.strokeStyle = hexToRgba(layer.strokeColor, layer.strokeOpacity !== undefined ? layer.strokeOpacity : 1.0);
+                ctx.lineWidth = layer.strokeWidth;
+                ctx.fillStyle = hexToRgba(layer.fillColor, layer.fillOpacity !== undefined ? layer.fillOpacity : 1.0);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (layer.commands.length > 0) {
+                    ctx.beginPath();
+                    
+                    // Render paths
+                    layer.commands.forEach((cmd, idx) => {
+                        if (cmd.type === 'M') {
+                            ctx.moveTo(cmd.x, cmd.y);
+                        } else if (cmd.type === 'L') {
+                            ctx.lineTo(cmd.x, cmd.y);
+                        } else if (cmd.type === 'Q') {
+                            ctx.quadraticCurveTo(cmd.cp1x, cmd.cp1y, cmd.x, cmd.y);
+                        } else if (cmd.type === 'C') {
+                            ctx.bezierCurveTo(cmd.cp1x, cmd.cp1y, cmd.cp2x, cmd.cp2y, cmd.x, cmd.y);
+                        }
+                    });
+
+                    if (layer.isClosed) {
+                        ctx.closePath();
+                    }
+
+                    if (layer.isFilled) {
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+                }
+
+                // 5. Draw Handles, Anchors & Control handles ONLY for active layer in 'select' / active mode
+                if (isActive) {
+                    layer.commands.forEach((cmd, idx) => {
+                        const isSelectedPoint = state.selectedPoint && state.selectedPoint.commandIndex === idx;
+
+                        // Draw anchor point lines for Curves
+                        if (cmd.type === 'Q') {
+                            // Get start point of this segment (end point of previous command or 0,0)
+                            const prev = layer.commands[idx - 1] || { x: 0, y: 0 };
+                            ctx.save();
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                            ctx.lineWidth = 1;
+                            ctx.setLineDash([2, 4]);
+                            ctx.beginPath();
+                            ctx.moveTo(prev.x, prev.y);
+                            ctx.lineTo(cmd.cp1x, cmd.cp1y);
+                            ctx.lineTo(cmd.x, cmd.y);
+                            ctx.stroke();
+                            ctx.restore();
+
+                            // Draw Quad control point handle
+                            const isCp1Selected = isSelectedPoint && state.selectedPoint.type === 'cp1';
+                            ctx.fillStyle = isCp1Selected ? '#f59e0b' : '#3b82f6';
+                            ctx.beginPath();
+                            ctx.arc(cmd.cp1x, cmd.cp1y, 5, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        } else if (cmd.type === 'C') {
+                            const prev = layer.commands[idx - 1] || { x: 0, y: 0 };
+                            ctx.save();
+                            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                            ctx.lineWidth = 1;
+                            ctx.setLineDash([2, 4]);
+                            
+                            // Visual guides
+                            ctx.beginPath();
+                            ctx.moveTo(prev.x, prev.y);
+                            ctx.lineTo(cmd.cp1x, cmd.cp1y);
+                            ctx.moveTo(cmd.x, cmd.y);
+                            ctx.lineTo(cmd.cp2x, cmd.cp2y);
+                            ctx.stroke();
+                            ctx.restore();
+
+                            // Draw control point 1
+                            const isCp1Selected = isSelectedPoint && state.selectedPoint.type === 'cp1';
+                            ctx.fillStyle = isCp1Selected ? '#f59e0b' : '#10b981';
+                            ctx.beginPath();
+                            ctx.arc(cmd.cp1x, cmd.cp1y, 5, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+
+                            // Draw control point 2
+                            const isCp2Selected = isSelectedPoint && state.selectedPoint.type === 'cp2';
+                            ctx.fillStyle = isCp2Selected ? '#f59e0b' : '#10b981';
+                            ctx.beginPath();
+                            ctx.arc(cmd.cp2x, cmd.cp2y, 5, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+
+                        // Draw main point handle
+                        const isMainSelected = isSelectedPoint && state.selectedPoint.type === 'main';
+                        ctx.fillStyle = isMainSelected ? '#f43f5e' : '#6366f1';
+                        ctx.beginPath();
+                        ctx.arc(cmd.x, cmd.y, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    });
+                }
+                ctx.restore();
+            });
+        }
+
+        // Layer Managers Interface Rendering
+        function renderLayersList() {
+            layersTabContainer.innerHTML = '';
+            
+            state.layers.forEach(layer => {
+                const isActive = (layer.id === state.activeLayerId);
+                const tab = document.createElement('div');
+                tab.className = `layer-tab ${isActive ? 'active' : ''}`;
+                
+                // Eye visibility state icon
+                const eyeIcon = layer.visible ? 'eye' : 'eye-off';
+                
+                tab.innerHTML = `
+                    <i data-lucide="${eyeIcon}" class="layer-visibility" onclick="toggleLayerVisibility(${layer.id}, event)"></i>
+                    <span class="layer-title-text" onclick="selectLayer(${layer.id})">${layer.name}</span>
+                    <i data-lucide="x" class="layer-delete" onclick="deleteLayer(${layer.id}, event)" title="Delete Layer"></i>
+                `;
+                
+                layersTabContainer.appendChild(tab);
+            });
+            
+            // Re-bind Lucide icons
+            lucide.createIcons();
+        }
+
+        // Layer visibility toggle
+        window.toggleLayerVisibility = function(layerId, event) {
+            event.stopPropagation();
+            const layer = state.layers.find(l => l.id === layerId);
+            if (layer) {
+                layer.visible = !layer.visible;
+                renderLayersList();
+                draw();
+            }
+        };
+
+        // Select active layer
+        window.selectLayer = function(layerId) {
+            pushHistory();
+            state.activeLayerId = layerId;
+            state.selectedPoint = null;
+            selectedPointName.innerText = 'None';
+            updateSelectedPointPanel();
+            
+            // Load layer properties in settings panel
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                strokeColorInput.value = activeLayer.strokeColor;
+                strokeColorText.innerText = activeLayer.strokeColor.toUpperCase();
+                strokeWidthInput.value = activeLayer.strokeWidth;
+                strokeWidthValue.innerText = activeLayer.strokeWidth + 'px';
+                
+                const sOpacityVal = Math.round((activeLayer.strokeOpacity !== undefined ? activeLayer.strokeOpacity : 1.0) * 100);
+                strokeOpacityInput.value = sOpacityVal;
+                strokeOpacityValue.innerText = sOpacityVal + '%';
+
+                fillToggle.checked = activeLayer.isFilled;
+                fillColorInput.value = activeLayer.fillColor;
+                fillColorText.innerText = activeLayer.fillColor.toUpperCase();
+                
+                const fOpacityVal = Math.round((activeLayer.fillOpacity !== undefined ? activeLayer.fillOpacity : 1.0) * 100);
+                fillOpacityInput.value = fOpacityVal;
+                fillOpacityValue.innerText = fOpacityVal + '%';
+
+                if (activeLayer.isFilled) {
+                    fillColorGroup.style.display = 'block';
+                    fillOpacityGroup.style.display = 'block';
+                } else {
+                    fillColorGroup.style.display = 'none';
+                    fillOpacityGroup.style.display = 'none';
+                }
+            }
+
+            renderLayersList();
+            draw();
+            generateCode();
+        };
+
+        // Delete specific layer
+        window.deleteLayer = function(layerId, event) {
+            event.stopPropagation();
+            if (state.layers.length <= 1) {
+                alert('最小でも1つのレイヤーが必要です！');
+                return;
+            }
+            if (confirm('このレイヤーを削除してもよろしいですか？')) {
+                pushHistory();
+                state.layers = state.layers.filter(l => l.id !== layerId);
+                
+                // Re-align activeLayer if the active one was deleted
+                if (state.activeLayerId === layerId) {
+                    state.activeLayerId = state.layers[0].id;
+                }
+                
+                renderLayersList();
+                draw();
+                generateCode();
+            }
+        };
+
+        // Add Layer Routine
+        addNewLayerBtn.addEventListener('click', () => {
+            pushHistory();
+            const nextId = state.layers.reduce((max, l) => Math.max(max, l.id), 0) + 1;
+            
+            // Create nice starting color based on ID index
+            const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'];
+            const newColor = colors[(nextId - 1) % colors.length];
+
+            state.layers.push({
+                id: nextId,
+                name: `Layer ${nextId}`,
+                visible: true,
+                opacity: 1.0,
+                strokeColor: newColor,
+                strokeOpacity: 1.0,
+                fillColor: newColor,
+                fillOpacity: 1.0,
+                strokeWidth: 2,
+                isFilled: false,
+                isClosed: false,
+                commands: []
+            });
+
+            state.activeLayerId = nextId;
+            renderLayersList();
+            selectLayer(nextId);
+        });
+
+        // Setup draw tool options
+        function setDrawMode(mode) {
+            state.drawMode = mode;
+            [toolSelect, toolLine, toolQuad, toolCubic].forEach(b => b.classList.remove('active'));
+            
+            if (mode === 'select') toolSelect.classList.add('active');
+            else if (mode === 'line') toolLine.classList.add('active');
+            else if (mode === 'quad') toolQuad.classList.add('active');
+            else if (mode === 'cubic') toolCubic.classList.add('active');
+        }
+
+        toolSelect.addEventListener('click', () => setDrawMode('select'));
+        toolLine.addEventListener('click', () => setDrawMode('line'));
+        toolQuad.addEventListener('click', () => setDrawMode('quad'));
+        toolCubic.addEventListener('click', () => setDrawMode('cubic'));
+
+        // Handle Close Path Action
+        closePathBtn.addEventListener('click', () => {
+            pushHistory();
+            const activeLayer = getActiveLayer();
+            if (activeLayer && activeLayer.commands.length > 2) {
+                activeLayer.isClosed = !activeLayer.isClosed;
+                draw();
+                generateCode();
+            } else {
+                alert('閉じたパスを作るには、少なくとも3つの点が必要です！');
+            }
+        });
+
+        // Handle Reset layer
+        clearPointsBtn.addEventListener('click', () => {
+            if (confirm('現在アクティブなレイヤー内のすべてのアンカーポイントを消去します。よろしいですか？')) {
+                pushHistory();
+                const activeLayer = getActiveLayer();
+                if (activeLayer) {
+                    activeLayer.commands = [];
+                    activeLayer.isClosed = false;
+                    state.selectedPoint = null;
+                    selectedPointName.innerText = 'None';
+                    draw();
+                    generateCode();
+                }
+            }
+        });
+        // Selected Point Properties Change Handlers
+        pointTypeSelect.addEventListener('change', (e) => {
+            const activeLayer = getActiveLayer();
+            if (!state.selectedPoint || !activeLayer) return;
+
+            const cmdIndex = state.selectedPoint.commandIndex;
+            const cmd = activeLayer.commands[cmdIndex];
+            if (!cmd || cmdIndex === 0) return; // M command cannot be converted
+
+            pushHistory();
+            const newType = e.target.value;
+            const prev = activeLayer.commands[cmdIndex - 1] || { x: 0, y: 0 };
+
+            if (newType === 'L') {
+                cmd.type = 'L';
+                delete cmd.cp1x;
+                delete cmd.cp1y;
+                delete cmd.cp2x;
+                delete cmd.cp2y;
+            } else if (newType === 'Q') {
+                cmd.type = 'Q';
+                cmd.cp1x = snap(Math.round((prev.x + cmd.x) / 2), state.gridSpacing);
+                cmd.cp1y = snap(Math.round((prev.y + cmd.y) / 2), state.gridSpacing);
+                delete cmd.cp2x;
+                delete cmd.cp2y;
+            } else if (newType === 'C') {
+                cmd.type = 'C';
+                const diffX = cmd.x - prev.x;
+                const diffY = cmd.y - prev.y;
+                cmd.cp1x = snap(Math.round(prev.x + diffX / 3), state.gridSpacing);
+                cmd.cp1y = snap(Math.round(prev.y + diffY / 3), state.gridSpacing);
+                cmd.cp2x = snap(Math.round(prev.x + (diffX * 2) / 3), state.gridSpacing);
+                cmd.cp2y = snap(Math.round(prev.y + (diffY * 2) / 3), state.gridSpacing);
+            }
+
+            updateSelectedPointPanel();
+            draw();
+            generateCode();
+        });
+
+        function handlePointCoordinateChange() {
+            const activeLayer = getActiveLayer();
+            if (!state.selectedPoint || !activeLayer) return;
+
+            const cmd = activeLayer.commands[state.selectedPoint.commandIndex];
+            if (!cmd) return;
+
+            cmd.x = parseInt(pointX.value) || 0;
+            cmd.y = parseInt(pointY.value) || 0;
+
+            if (cmd.type === 'Q') {
+                cmd.cp1x = parseInt(pointCp1X.value) || 0;
+                cmd.cp1y = parseInt(pointCp1Y.value) || 0;
+            } else if (cmd.type === 'C') {
+                cmd.cp1x = parseInt(pointCp1X.value) || 0;
+                cmd.cp1y = parseInt(pointCp1Y.value) || 0;
+                cmd.cp2x = parseInt(pointCp2X.value) || 0;
+                cmd.cp2y = parseInt(pointCp2Y.value) || 0;
+            }
+
+            draw();
+            generateCode();
+        }
+
+        [pointX, pointY, pointCp1X, pointCp1Y, pointCp2X, pointCp2Y].forEach(el => {
+            el.addEventListener('input', handlePointCoordinateChange);
+        });
+
+        deletePointBtn.addEventListener('click', () => {
+            if (!state.selectedPoint) return;
+            pushHistory();
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.commands.splice(state.selectedPoint.commandIndex, 1);
+                if (activeLayer.commands.length === 0) {
+                    activeLayer.isClosed = false;
+                }
+                state.selectedPoint = null;
+                selectedPointName.innerText = 'None';
+                updateSelectedPointPanel();
+                draw();
+                generateCode();
+            }
+        });
+
+        // Property changes sync to active layer
+        strokeWidthInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            strokeWidthValue.innerText = val + 'px';
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.strokeWidth = val;
+                draw();
+                generateCode();
+            }
+        });
+
+        strokeColorInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            strokeColorText.innerText = val.toUpperCase();
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.strokeColor = val;
+                draw();
+                generateCode();
+            }
+        });
+
+        strokeOpacityInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            strokeOpacityValue.innerText = val + '%';
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.strokeOpacity = val / 100;
+                draw();
+                generateCode();
+            }
+        });
+
+        fillToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            fillColorGroup.style.display = isChecked ? 'block' : 'none';
+            fillOpacityGroup.style.display = isChecked ? 'block' : 'none';
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.isFilled = isChecked;
+                draw();
+                generateCode();
+            }
+        });
+
+        fillColorInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            fillColorText.innerText = val.toUpperCase();
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.fillColor = val;
+                draw();
+                generateCode();
+            }
+        });
+
+        fillOpacityInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            fillOpacityValue.innerText = val + '%';
+            const activeLayer = getActiveLayer();
+            if (activeLayer) {
+                activeLayer.fillOpacity = val / 100;
+                draw();
+                generateCode();
+            }
+        });
+
+        gridSpacingInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            gridSpacingValue.innerText = val + 'px';
+            state.gridSpacing = val;
+            draw();
+        });
+
+        gridColorInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            gridColorText.innerText = val.toUpperCase();
+            state.gridColor = val;
+            draw();
+        });
+
+        snapToggle.addEventListener('change', (e) => {
+            state.snapToGrid = e.target.checked;
+        });
+
+        // Reference Image file handler
+        function loadReferenceImage(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    state.refImage = img;
+                    state.refImageName = file.name;
+                    refImageName.innerText = file.name;
+                    imageControls.style.display = 'block';
+                    imageDropzone.style.display = 'none';
+                    
+                    // Reset offsets & scale to fit canvas nicely
+                    state.refImageOffsetX = 0;
+                    state.refImageOffsetY = 0;
+                    imageOffsetX.value = 0;
+                    imageOffsetY.value = 0;
+                    
+                    const scaleFactor = Math.min(canvas.width / img.width, canvas.height / img.height, 1.0);
+                    state.refImageScale = scaleFactor;
+                    imageScaleInput.value = Math.round(scaleFactor * 100);
+                    imageScaleValue.innerText = Math.round(scaleFactor * 100) + '%';
+                    
+                    draw();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        imageDropzone.addEventListener('click', () => imageFileInput.click());
+        imageFileInput.addEventListener('change', (e) => {
+            loadReferenceImage(e.target.files[0]);
+        });
+
+        // Dragover files styling
+        imageDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageDropzone.classList.add('dragover');
+        });
+        imageDropzone.addEventListener('dragleave', () => {
+            imageDropzone.classList.remove('dragover');
+        });
+        imageDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageDropzone.classList.remove('dragover');
+            loadReferenceImage(e.dataTransfer.files[0]);
+        });
+
+        // Opacity, Scale and translations of ref image
+        imageOpacityInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            imageOpacityValue.innerText = val + '%';
+            state.refImageOpacity = val / 100;
+            draw();
+        });
+
+        imageScaleInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            imageScaleValue.innerText = val + '%';
+            state.refImageScale = val / 100;
+            draw();
+        });
+
+        imageOffsetX.addEventListener('input', (e) => {
+            state.refImageOffsetX = parseInt(e.target.value) || 0;
+            draw();
+        });
+
+        imageOffsetY.addEventListener('input', (e) => {
+            state.refImageOffsetY = parseInt(e.target.value) || 0;
+            draw();
+        });
+
+        removeImageBtn.addEventListener('click', () => {
+            state.refImage = null;
+            state.refImageName = '';
+            imageControls.style.display = 'none';
+            imageDropzone.style.display = 'block';
+            imageFileInput.value = '';
+            draw();
+        });
+
+        // Realtime code generators logic with Offset & Variable Injection
+        function generateCode() {
+            const ox = parseInt(originXInput.value) || 0;
+            const oy = parseInt(originYInput.value) || 0;
+            const inject = injectOffsetsToggle.checked;
+            const px = varPrefixX.value || 'x';
+            const py = varPrefixY.value || 'y';
+            const injectScale = injectScaleToggle.checked;
+            const sName = varScaleName.value || 'scale';
+            const isIntCast = castToIntToggle.checked;
+
+            // Formatter for coordinates
+            function fmtCoord(val, axis) {
+                const diff = val - (axis === 'x' ? ox : oy);
+                const prefix = axis === 'x' ? px : py;
+                
+                if (!inject) {
+                    return diff; // Just output raw offset number
+                }
+
+                // If relative diff is 0, just return variable itself
+                if (diff === 0) {
+                    if (injectScale) {
+                        return prefix;
+                    }
+                    return prefix;
+                }
+
+                // Coordinate offset math
+                if (injectScale) {
+                    // Output format with scale variable, e.g. x + (int)(50 * scale)
+                    const absDiff = Math.abs(diff);
+                    const sign = diff > 0 ? '+' : '-';
+                    if (state.currentFormat === 'android' || state.currentFormat === 'awt') {
+                        if (isIntCast) {
+                            return `${prefix} ${sign} (int)(${absDiff} * ${sName})`;
+                        } else {
+                            return `${prefix} ${sign} (${absDiff} * ${sName})`;
+                        }
+                    } else {
+                        // JavaScript output style
+                        return `${prefix} ${sign} (${absDiff} * ${sName})`;
+                    }
+                } else {
+                    // Traditional offset without scale
+                    const sign = diff > 0 ? '+' : '-';
+                    return `${prefix} ${sign} ${Math.abs(diff)}`;
+                }
+            }
+
+            let code = '';
+
+            if (state.currentFormat === 'android') {
+                // Generate Android Java Path Code
+                code += `// Generated by Canvas Path Creator\n`;
+                state.layers.forEach((layer) => {
+                    if (layer.commands.length === 0) return;
+                    
+                    const sr = parseInt(layer.strokeColor.slice(1, 3), 16);
+                    const sg = parseInt(layer.strokeColor.slice(3, 5), 16);
+                    const sb = parseInt(layer.strokeColor.slice(5, 7), 16);
+                    const sa = Math.round((layer.strokeOpacity !== undefined ? layer.strokeOpacity : 1.0) * 255);
+                    
+                    code += `// --- ${layer.name} (Paint Setup) ---\n`;
+                    code += `// Paint paint_${layer.id} = new Paint(Paint.ANTI_ALIAS_FLAG);\n`;
+                    code += `// paint_${layer.id}.setStyle(Paint.Style.${layer.isFilled ? 'FILL_AND_STROKE' : 'STROKE'});\n`;
+                    code += `// paint_${layer.id}.setStrokeWidth(${layer.strokeWidth}f);\n`;
+                    code += `// paint_${layer.id}.setColor(Color.argb(${sa}, ${sr}, ${sg}, ${sb}));\n\n`;
+                    
+                    code += `Path path_${layer.id} = new Path();\n`;
+                    
+                    layer.commands.forEach(cmd => {
+                        if (cmd.type === 'M') {
+                            code += `path_${layer.id}.moveTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'L') {
+                            code += `path_${layer.id}.lineTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'Q') {
+                            code += `path_${layer.id}.quadTo(\n`;
+                            code += `    ${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')}\n`;
+                            code += `);\n`;
+                        } else if (cmd.type === 'C') {
+                            code += `path_${layer.id}.cubicTo(\n`;
+                            code += `    ${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.cp2x, 'x')}, ${fmtCoord(cmd.cp2y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')}\n`;
+                            code += `);\n`;
+                        }
+                    });
+
+                    if (layer.isClosed) {
+                        code += `path_${layer.id}.close();\n`;
+                    }
+                    code += `\n`;
+                });
+            } else if (state.currentFormat === 'js') {
+                // Generate JS HTML5 Canvas Code
+                code += `// Generated by Canvas Path Creator\n`;
+                code += `// const canvas = document.getElementById('myCanvas');\n`;
+                code += `// const ctx = canvas.getContext('2d');\n\n`;
+                
+                state.layers.forEach((layer) => {
+                    if (layer.commands.length === 0) return;
+                    code += `// --- ${layer.name} ---\n`;
+                    code += `ctx.beginPath();\n`;
+                    code += `ctx.lineWidth = ${layer.strokeWidth};\n`;
+                    code += `ctx.strokeStyle = '${hexToRgba(layer.strokeColor, layer.strokeOpacity !== undefined ? layer.strokeOpacity : 1.0)}';\n`;
+                    if (layer.isFilled) {
+                        code += `ctx.fillStyle = '${hexToRgba(layer.fillColor, layer.fillOpacity !== undefined ? layer.fillOpacity : 1.0)}';\n`;
+                    }
+
+                    layer.commands.forEach(cmd => {
+                        if (cmd.type === 'M') {
+                            code += `ctx.moveTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'L') {
+                            code += `ctx.lineTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'Q') {
+                            code += `ctx.quadraticCurveTo(${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')}, ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'C') {
+                            code += `ctx.bezierCurveTo(\n`;
+                            code += `    ${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.cp2x, 'x')}, ${fmtCoord(cmd.cp2y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')}\n`;
+                            code += `);\n`;
+                        }
+                    });
+
+                    if (layer.isClosed) {
+                        code += `ctx.closePath();\n`;
+                    }
+                    if (layer.isFilled) {
+                        code += `ctx.fill();\n`;
+                    }
+                    code += `ctx.stroke();\n\n`;
+                });
+            } else if (state.currentFormat === 'awt') {
+                // Generate Java AWT Path2D Code
+                code += `// Generated by Canvas Path Creator\n`;
+                code += `import java.awt.geom.Path2D;\n\n`;
+                
+                state.layers.forEach((layer) => {
+                    if (layer.commands.length === 0) return;
+                    
+                    const sr = parseInt(layer.strokeColor.slice(1, 3), 16);
+                    const sg = parseInt(layer.strokeColor.slice(3, 5), 16);
+                    const sb = parseInt(layer.strokeColor.slice(5, 7), 16);
+                    const sa = Math.round((layer.strokeOpacity !== undefined ? layer.strokeOpacity : 1.0) * 255);
+
+                    code += `// --- ${layer.name} (Graphics2D Color Setup) ---\n`;
+                    code += `// g2d.setStroke(new BasicStroke(${layer.strokeWidth}f));\n`;
+                    code += `// g2d.setColor(new Color(${sr}, ${sg}, ${sb}, ${sa}));\n\n`;
+
+                    code += `Path2D.Double path_${layer.id} = new Path2D.Double();\n`;
+                    
+                    layer.commands.forEach(cmd => {
+                        if (cmd.type === 'M') {
+                            code += `path_${layer.id}.moveTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'L') {
+                            code += `path_${layer.id}.lineTo(${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')});\n`;
+                        } else if (cmd.type === 'Q') {
+                            code += `path_${layer.id}.quadTo(\n`;
+                            code += `    ${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')}\n`;
+                            code += `);\n`;
+                        } else if (cmd.type === 'C') {
+                            code += `path_${layer.id}.curveTo(\n`;
+                            code += `    ${fmtCoord(cmd.cp1x, 'x')}, ${fmtCoord(cmd.cp1y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.cp2x, 'x')}, ${fmtCoord(cmd.cp2y, 'y')},\n`;
+                            code += `    ${fmtCoord(cmd.x, 'x')}, ${fmtCoord(cmd.y, 'y')}\n`;
+                            code += `);\n`;
+                        }
+                    });
+
+                    if (layer.isClosed) {
+                        code += `path_${layer.id}.closePath();\n`;
+                    }
+                    code += `\n`;
+                });
+            } else if (state.currentFormat === 'svg') {
+                // Generate SVG path string code
+                code += `<!-- Generated by Canvas Path Creator -->\n`;
+                code += `<svg width="${state.canvasWidth}" height="${state.canvasHeight}" xmlns="http://www.w3.org/2000/svg">\n`;
+                
+                state.layers.forEach((layer) => {
+                    if (layer.commands.length === 0) return;
+                    
+                    let d = '';
+                    layer.commands.forEach(cmd => {
+                        // SVG path string commands
+                        if (cmd.type === 'M') {
+                            d += `M ${cmd.x} ${cmd.y} `;
+                        } else if (cmd.type === 'L') {
+                            d += `L ${cmd.x} ${cmd.y} `;
+                        } else if (cmd.type === 'Q') {
+                            d += `Q ${cmd.cp1x} ${cmd.cp1y}, ${cmd.x} ${cmd.y} `;
+                        } else if (cmd.type === 'C') {
+                            d += `C ${cmd.cp1x} ${cmd.cp1y}, ${cmd.cp2x} ${cmd.cp2y}, ${cmd.x} ${cmd.y} `;
+                        }
+                    });
+
+                    if (layer.isClosed) {
+                        d += 'Z';
+                    }
+
+                    const fill = layer.isFilled ? layer.fillColor : 'none';
+                    const fillOpacity = layer.isFilled ? (layer.fillOpacity !== undefined ? layer.fillOpacity : 1.0) : 1.0;
+                    const strokeOpacity = layer.strokeOpacity !== undefined ? layer.strokeOpacity : 1.0;
+                    
+                    code += `  <path d="${d.trim()}" stroke="${layer.strokeColor}" stroke-opacity="${strokeOpacity}" stroke-width="${layer.strokeWidth}" fill="${fill}" fill-opacity="${fillOpacity}" />\n`;
+                });
+                
+                code += `</svg>\n`;
+            }
+
+            codeOutput.innerText = code;
+        }
+
+        // Variable Panel logic
+        injectOffsetsToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            offsetVariablesPanel.style.display = isChecked ? 'block' : 'none';
+            generateCode();
+        });
+
+        injectScaleToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            scaleVariableContainer.style.display = isChecked ? 'block' : 'none';
+            generateCode();
+        });
+
+        [originXInput, originYInput, varPrefixX, varPrefixY, varScaleName, castToIntToggle].forEach(input => {
+            input.addEventListener('input', () => {
+                draw();
+                generateCode();
+            });
+            input.addEventListener('change', () => {
+                draw();
+                generateCode();
+            });
+        });
+
+        // Exporter Formats Tabs switching
+        const formatTabs = document.querySelectorAll('.exporter-tab');
+        formatTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                formatTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                state.currentFormat = tab.getAttribute('data-format');
+                generateCode();
+            });
+        });
+
+        // Copy functionality
+        function copyToClipboard() {
+            const code = codeOutput.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const copyBtnText = copyCodeBtn.querySelector('span');
+                const copyNavText = copyCodeNavBtn.querySelector('span');
+                
+                const originalBtn = copyBtnText.innerText;
+                copyBtnText.innerText = 'COPIED!';
+                copyNavText.innerText = 'COPIED!';
+                
+                setTimeout(() => {
+                    copyBtnText.innerText = originalBtn;
+                    copyNavText.innerText = 'COPY ACTIVE CODE';
+                }, 2000);
+            }).catch(err => {
+                alert('コピーに失敗しました。お手数ですが手動で選択してコピーしてください。');
+            });
+        }
+
+        copyCodeBtn.addEventListener('click', copyToClipboard);
+        copyCodeNavBtn.addEventListener('click', copyToClipboard);
+
+        // --- IMPORTER DRAWER FUNCTIONALITY & CODE PARSING ---
+        toggleImporterBtn.addEventListener('click', () => {
+            const isDisplayed = importerDrawer.style.display === 'block';
+            importerDrawer.style.display = isDisplayed ? 'none' : 'block';
+        });
+
+        closeImporterBtn.addEventListener('click', () => {
+            importerDrawer.style.display = 'none';
+            importerFeedback.innerText = '';
+        });
+
+        parseCodeBtn.addEventListener('click', () => {
+            const input = importerInput.value.trim();
+            if (!input) {
+                showFeedback('入力欄が空です。', 'error');
+                return;
+            }
+
+            try {
+                pushHistory();
+                const activeLayer = getActiveLayer();
+                if (!activeLayer) {
+                    showFeedback('アクティブなレイヤーが見つかりません。', 'error');
+                    return;
+                }
+
+                // Regular expressions matching Canvas 2D / Java Path methods
+                const moveToRegex = /(?:\.|\s|^)moveTo\s*\(\s*([^,)]+)\s*,\s*([^,)]+)\s*\)/;
+                const lineToRegex = /(?:\.|\s|^)lineTo\s*\(\s*([^,)]+)\s*,\s*([^,)]+)\s*\)/;
+                const quadToRegex = /(?:\.|\s|^)(?:quadTo|quadraticCurveTo)\s*\(\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*\)/;
+                const cubicToRegex = /(?:\.|\s|^)(?:cubicTo|bezierCurveTo|curveTo)\s*\(\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*,\s*([^,)]+)\s*\)/;
+                const closePathRegex = /(?:\.|\s|^)(?:close|closePath)\s*\(\s*\)/;
+
+                // Color and style matching
+                const strokeColorRegex = /(?:\.strokeStyle|\.setColor)\s*=\s*['"`]?([^'`";]+)['"`]?/;
+                const strokeWidthRegex = /(?:\.lineWidth|\.setStrokeWidth|\.setStroke)\s*=\s*([0-9.]+)/;
+                const fillColorRegex = /(?:\.fillStyle)\s*=\s*['"`]?([^'`";]+)['"`]?/;
+
+                const lines = input.split('\n');
+                let parsedCommands = [];
+                let parseErrorsCount = 0;
+
+                // Parse offset context (to strip them out and find original coordinate numbers)
+                // Looks for variables like "x + 20" or "x - 50" or "(int)(x + 50 * scale)"
+                function parseValue(str) {
+                    str = str.replace(/[\s;()]/g, ''); // strip spaces, semicolons, brackets
+                    
+                    // If it's a raw integer float, return directly
+                    if (/^-?[0-9.]+$/.test(str)) {
+                        return parseFloat(str);
+                    }
+
+                    // Look for relative calculation patterns like 'x+50'
+                    // Handles variable + offset (e.g. x+50, y-120)
+                    const offsetMatch = str.match(/^[a-zA-Z_][a-zA-Z0-9_]*([+-][0-9.]+)$/);
+                    if (offsetMatch) {
+                        return parseFloat(offsetMatch[1]);
+                    }
+
+                    // Scale formula injection e.g. x+(int)(50*scale)
+                    const scaleMatch = str.match(/^[a-zA-Z_][a-zA-Z0-9_]*([+-])[a-zA-Z_0-9*()]*([0-9.]+)/);
+                    if (scaleMatch) {
+                        const sign = scaleMatch[1] === '-' ? -1 : 1;
+                        return sign * parseFloat(scaleMatch[2]);
+                    }
+
+                    // Default fallback: if no coordinates could be parsed, default to 0
+                    return 0;
+                }
+
+                lines.forEach((line) => {
+                    line = line.trim();
+                    if (!line || line.startsWith('//') || line.startsWith('/*')) return;
+
+                    // Match Stroke Colors
+                    const strokeColorMatch = line.match(strokeColorRegex);
+                    if (strokeColorMatch) {
+                        activeLayer.strokeColor = strokeColorMatch[1];
+                        strokeColorInput.value = strokeColorMatch[1];
+                        strokeColorText.innerText = strokeColorMatch[1].toUpperCase();
+                    }
+
+                    // Match Stroke Width
+                    const strokeWidthMatch = line.match(strokeWidthRegex);
+                    if (strokeWidthMatch) {
+                        const w = Math.round(parseFloat(strokeWidthMatch[1]));
+                        activeLayer.strokeWidth = w;
+                        strokeWidthInput.value = w;
+                        strokeWidthValue.innerText = w + 'px';
+                    }
+
+                    // Match Fill Colors
+                    const fillColorMatch = line.match(fillColorRegex);
+                    if (fillColorMatch) {
+                        activeLayer.fillColor = fillColorMatch[1];
+                        activeLayer.isFilled = true;
+                        fillToggle.checked = true;
+                        fillColorInput.value = fillColorMatch[1];
+                        fillColorText.innerText = fillColorMatch[1].toUpperCase();
+                        fillColorGroup.style.display = 'block';
+                    }
+
+                    // Match Commands
+                    if (moveToRegex.test(line)) {
+                        const m = line.match(moveToRegex);
+                        parsedCommands.push({
+                            type: 'M',
+                            x: parseValue(m[1]),
+                            y: parseValue(m[2])
+                        });
+                    } else if (lineToRegex.test(line)) {
+                        const m = line.match(lineToRegex);
+                        parsedCommands.push({
+                            type: 'L',
+                            x: parseValue(m[1]),
+                            y: parseValue(m[2])
+                        });
+                    } else if (quadToRegex.test(line)) {
+                        const m = line.match(quadToRegex);
+                        // For JS: quadTo(cp1x, cp1y, x, y)
+                        parsedCommands.push({
+                            type: 'Q',
+                            cp1x: parseValue(m[1]),
+                            cp1y: parseValue(m[2]),
+                            x: parseValue(m[3]),
+                            y: parseValue(m[4])
+                        });
+                    } else if (cubicToRegex.test(line)) {
+                        const m = line.match(cubicToRegex);
+                        // For JS: bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+                        parsedCommands.push({
+                            type: 'C',
+                            cp1x: parseValue(m[1]),
+                            cp1y: parseValue(m[2]),
+                            cp2x: parseValue(m[3]),
+                            cp2y: parseValue(m[4]),
+                            x: parseValue(m[5]),
+                            y: parseValue(m[6])
+                        });
+                    } else if (closePathRegex.test(line)) {
+                        activeLayer.isClosed = true;
+                    } else {
+                        // Line was not understood as a direct path drawing command
+                        if (line.includes('lineTo') || line.includes('moveTo') || line.includes('quad') || line.includes('bezier')) {
+                            parseErrorsCount++;
+                        }
+                    }
+                });
+
+                if (parsedCommands.length === 0) {
+                    showFeedback('有効なパス描画コマンドが見つかりませんでした。', 'error');
+                    return;
+                }
+
+                // If relative offsets parsed, shift them to visual values relative to Anchor!
+                const ox = parseInt(originXInput.value) || 0;
+                const oy = parseInt(originYInput.value) || 0;
+
+                // Restore absolute visual canvas coordinates from relative offsets
+                parsedCommands.forEach(cmd => {
+                    cmd.x = ox + cmd.x;
+                    cmd.y = oy + cmd.y;
+                    if (cmd.type === 'Q') {
+                        cmd.cp1x = ox + cmd.cp1x;
+                        cmd.cp1y = oy + cmd.cp1y;
+                    } else if (cmd.type === 'C') {
+                        cmd.cp1x = ox + cmd.cp1x;
+                        cmd.cp1y = oy + cmd.cp1y;
+                        cmd.cp2x = ox + cmd.cp2x;
+                        cmd.cp2y = oy + cmd.cp2y;
+                    }
+                });
+
+                // Load parsed path into active layer
+                activeLayer.commands = parsedCommands;
+                
+                let successMsg = `${parsedCommands.length}個のコマンドをインポートしました！`;
+                if (parseErrorsCount > 0) {
+                    successMsg += ` (警告: ${parseErrorsCount}行がスキップされました)`;
+                }
+
+                showFeedback(successMsg, 'success');
+                draw();
+                generateCode();
+
+                // Close drawer after short delay on success
+                setTimeout(() => {
+                    importerDrawer.style.display = 'none';
+                    importerFeedback.innerText = '';
+                }, 2000);
+
+            } catch (err) {
+                console.error(err);
+                showFeedback('インポート解析中に予期しないエラーが発生しました。', 'error');
+            }
+        });
+
+        function showFeedback(msg, type) {
+            importerFeedback.innerText = msg;
+            importerFeedback.className = `importer-feedback ${type}`;
+        }
+
+        // --- INTERACTIVE GRID CANVAS DRAWING STATE MACHINE ---
+        
+        // Find existing handle under mouse coordinates
+        function getHandleAtPosition(pos) {
+            const activeLayer = getActiveLayer();
+            if (!activeLayer || !activeLayer.visible) return null;
+
+            const radiusLimit = 8; // selection hit box radius
+
+            for (let i = 0; i < activeLayer.commands.length; i++) {
+                const cmd = activeLayer.commands[i];
+                
+                // 1. Check main point handle
+                const distMain = Math.hypot(pos.x - cmd.x, pos.y - cmd.y);
+                if (distMain <= radiusLimit) {
+                    return { commandIndex: i, type: 'main' };
+                }
+
+                // 2. Check control handles
+                if (cmd.type === 'Q') {
+                    const distCp1 = Math.hypot(pos.x - cmd.cp1x, pos.y - cmd.cp1y);
+                    if (distCp1 <= radiusLimit) {
+                        return { commandIndex: i, type: 'cp1' };
+                    }
+                } else if (cmd.type === 'C') {
+                    const distCp1 = Math.hypot(pos.x - cmd.cp1x, pos.y - cmd.cp1y);
+                    if (distCp1 <= radiusLimit) {
+                        return { commandIndex: i, type: 'cp1' };
+                    }
+                    const distCp2 = Math.hypot(pos.x - cmd.cp2x, pos.y - cmd.cp2y);
+                    if (distCp2 <= radiusLimit) {
+                        return { commandIndex: i, type: 'cp2' };
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // Mousedown handler
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only trigger for Left Click
+            
+            const mousePos = getMousePos(e);
+            const snappedX = snap(mousePos.x, state.gridSpacing);
+            const snappedY = snap(mousePos.y, state.gridSpacing);
+            
+            const activeLayer = getActiveLayer();
+            if (!activeLayer) return;
+
+            // Check if user clicked a handle
+            const handle = getHandleAtPosition(mousePos);
+
+            if (state.drawMode === 'select') {
+                if (handle) {
+                    pushHistory();
+                    state.selectedPoint = {
+                        layerId: activeLayer.id,
+                        commandIndex: handle.commandIndex,
+                        type: handle.type
+                    };
+                    isDragging = true;
+                    
+                    selectedPointName.innerText = `${activeLayer.name} - Point ${handle.commandIndex} (${handle.type})`;
+                    updateSelectedPointPanel();
+                    draw();
+                } else {
+                    // Deselect
+                    state.selectedPoint = null;
+                    selectedPointName.innerText = 'None';
+                    updateSelectedPointPanel();
+                    draw();
+                }
+            } else {
+                // Drawing tool additions
+                pushHistory();
+                
+                const isFirstCommand = activeLayer.commands.length === 0;
+                
+                if (isFirstCommand) {
+                    // First point must be an 'M' (moveTo) command
+                    activeLayer.commands.push({
+                        type: 'M',
+                        x: snappedX,
+                        y: snappedY
+                    });
+                } else {
+                    // Subsequent segments
+                    const lastCmd = activeLayer.commands[activeLayer.commands.length - 1];
+                    
+                    if (state.drawMode === 'line') {
+                        activeLayer.commands.push({
+                            type: 'L',
+                            x: snappedX,
+                            y: snappedY
+                        });
+                    } else if (state.drawMode === 'quad') {
+                        // Create 2nd degree bezier
+                        // Placed control point halfway between endpoints as initial position
+                        const midX = Math.round((lastCmd.x + snappedX) / 2);
+                        const midY = Math.round((lastCmd.y + snappedY) / 2);
+                        activeLayer.commands.push({
+                            type: 'Q',
+                            cp1x: snap(midX, state.gridSpacing),
+                            cp1y: snap(midY, state.gridSpacing),
+                            x: snappedX,
+                            y: snappedY
+                        });
+                    } else if (state.drawMode === 'cubic') {
+                        // Create 3rd degree bezier
+                        // Placed control points 1/3 and 2/3 along path
+                        const diffX = snappedX - lastCmd.x;
+                        const diffY = snappedY - lastCmd.y;
+                        const cp1x = lastCmd.x + diffX / 3;
+                        const cp1y = lastCmd.y + diffY / 3;
+                        const cp2x = lastCmd.x + (diffX * 2) / 3;
+                        const cp2y = lastCmd.y + (diffY * 2) / 3;
+
+                        activeLayer.commands.push({
+                            type: 'C',
+                            cp1x: snap(Math.round(cp1x), state.gridSpacing),
+                            cp1y: snap(Math.round(cp1y), state.gridSpacing),
+                            cp2x: snap(Math.round(cp2x), state.gridSpacing),
+                            cp2y: snap(Math.round(cp2y), state.gridSpacing),
+                            x: snappedX,
+                            y: snappedY
+                        });
+                    }
+                }
+
+                // Immediately auto-select the newly added point to let the user drag it
+                state.selectedPoint = {
+                    layerId: activeLayer.id,
+                    commandIndex: activeLayer.commands.length - 1,
+                    type: 'main'
+                };
+                isDragging = true;
+                
+                updateSelectedPointPanel();
+                draw();
+                generateCode();
+            }
+        });
+
+        // Mousemove handler
+        canvas.addEventListener('mousemove', (e) => {
+            const mousePos = getMousePos(e);
+            
+            // Render cursor coordinates in real-time
+            cursorCoordX.innerText = Math.round(mousePos.x);
+            cursorCoordY.innerText = Math.round(mousePos.y);
+
+            if (isDragging && state.selectedPoint) {
+                const activeLayer = getActiveLayer();
+                if (!activeLayer) return;
+
+                const snappedX = snap(mousePos.x, state.gridSpacing);
+                const snappedY = snap(mousePos.y, state.gridSpacing);
+                const cmd = activeLayer.commands[state.selectedPoint.commandIndex];
+
+                if (cmd) {
+                    if (state.selectedPoint.type === 'main') {
+                        cmd.x = snappedX;
+                        cmd.y = snappedY;
+                    } else if (state.selectedPoint.type === 'cp1') {
+                        cmd.cp1x = snappedX;
+                        cmd.cp1y = snappedY;
+                    } else if (state.selectedPoint.type === 'cp2') {
+                        cmd.cp2x = snappedX;
+                        cmd.cp2y = snappedY;
+                    }
+                    
+                    updateSelectedPointPanel();
+                    draw();
+                    generateCode();
+                }
+            }
+        });
+
+        // Mouseup / Mouseleave end dragging
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        // Canvas Configuration changes
+        canvasWidthInput.addEventListener('change', updateCanvasSize);
+        canvasHeightInput.addEventListener('change', updateCanvasSize);
+
+        // --- KEYBOARD SHORTCUTS ENGINE ---
+        window.addEventListener('keydown', (e) => {
+            shiftPressed = e.shiftKey;
+            
+            // Shift Key Snapping toggle representation in Status Overlay
+            if (e.key === 'Shift') {
+                draw();
+            }
+
+            // Global Undo (Ctrl + Z)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                undo();
+            }
+
+            // Keyboard tool switching shortcuts
+            if (!importerDrawer.contains(document.activeElement)) {
+                if (e.key.toLowerCase() === 'v') setDrawMode('select');
+                else if (e.key.toLowerCase() === 'l') setDrawMode('line');
+                else if (e.key.toLowerCase() === 'q') setDrawMode('quad');
+                else if (e.key.toLowerCase() === 'c') setDrawMode('cubic');
+                else if (e.key.toLowerCase() === 'z') {
+                    // Quick close path shortcut
+                    closePathBtn.click();
+                }
+
+                // Delete selected anchor point on 'Delete' or 'Backspace'
+                if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedPoint) {
+                    e.preventDefault();
+                    pushHistory();
+                    const activeLayer = getActiveLayer();
+                    if (activeLayer) {
+                        activeLayer.commands.splice(state.selectedPoint.commandIndex, 1);
+                        
+                        // If we deleted the only path command, reset closed status
+                        if (activeLayer.commands.length === 0) {
+                            activeLayer.isClosed = false;
+                        }
+                        
+                        state.selectedPoint = null;
+                        selectedPointName.innerText = 'None';
+                        updateSelectedPointPanel();
+                        
+                        draw();
+                        generateCode();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift') {
+                shiftPressed = false;
+                draw();
+            }
+        });
+
+        // Main initializer call
+        updateCanvasSize();
+        renderLayersList();
+        generateCode();
+    </script>
+</body>
+
+</html>
